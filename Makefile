@@ -22,7 +22,8 @@ LDFLAGS = -s -w \
   -X main.commit=$(COMMIT) \
   -X main.buildDate=$(BUILD_DATE)
 
-COVERAGE_MIN = 85
+# Minimum total statement coverage (percent) enforced by `make coverage`.
+COVERAGE_MIN ?= 85
 
 .PHONY: help
 help: ## Show this help.
@@ -33,7 +34,7 @@ run: ## Run the application.
 	go run -ldflags "$(LDFLAGS)" .
 
 .PHONY: check
-check: fmt-check vet lint test ## Run all checks.
+check: fmt-check vet lint test coverage ## Run all checks (format, vet, lint, test, coverage)
 
 .PHONY: test
 test: ## Run tests.
@@ -44,9 +45,13 @@ stress: ## Run tests with -count=10 for stress testing.
 	go test -race -count=10 ./...
 
 .PHONY: coverage
-coverage: ## Run tests with coverage.
-	go test -race -coverprofile=coverage.out -coverpkg=./... ./...
-	go tool cover -func=coverage.out
+coverage: ## Run tests with whole-module coverage (writes coverage.out); fails below COVERAGE_MIN percent
+	@echo "Running tests with coverage"
+	@go test -count=1 -race -coverprofile=coverage.out -covermode=atomic -coverpkg=./... ./...
+	@total=$$(go tool cover -func=coverage.out | awk '/^total:/ { sub("%", "", $$3); print $$3 }'); \
+	echo "Total coverage: $$total% (minimum $(COVERAGE_MIN)%)"; \
+	awk -v t="$$total" -v m="$(COVERAGE_MIN)" 'BEGIN { exit (t + 0 < m + 0) ? 1 : 0 }' || \
+		{ echo "coverage $$total% is below $(COVERAGE_MIN)%"; exit 1; }
 
 .PHONY: cover
 cover: coverage ## Run tests with coverage and open HTML report.

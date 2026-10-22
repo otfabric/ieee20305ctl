@@ -5,154 +5,91 @@ package client
 import (
 	"context"
 	"fmt"
-	"io"
-	"reflect"
+	"strconv"
 	"strings"
-	"text/tabwriter"
+	"time"
+
+	"github.com/otfabric/go-ieee20305/discovery"
+	"github.com/spf13/cobra"
 
 	"github.com/otfabric/ieee20305ctl/internal/errs"
 	"github.com/otfabric/ieee20305ctl/internal/format"
-	"github.com/spf13/cobra"
+	"github.com/otfabric/ieee20305ctl/internal/runner"
 )
 
-// Link is a link of a resource to another one.
-type Link struct {
-	// Name is the element name of the link, such as EndDeviceListLink.
-	Name string `json:"name"`
-	Href string `json:"href"`
-	// All is the number of items of a list link, when the server says.
-	All *uint32 `json:"all,omitempty"`
+// Service is a record of client discover: a server found with DNS-SD.
+type Service struct {
+	Instance string   `json:"instance"`
+	Host     string   `json:"host"`
+	Port     int      `json:"port"`
+	Addrs    []string `json:"addresses"`
+	URL      string   `json:"url,omitempty"`
+	Subtypes []string `json:"subtypes,omitempty"`
+	Removed  bool     `json:"removed,omitempty"`
 }
 
-// Discovery is the result of client discover.
-type Discovery struct {
-	URL      string `json:"url"`
-	PollRate uint32 `json:"pollRate"`
-	Links    []Link `json:"links"`
+func (s *Service) MarshalTextOutput() (string, error) {
+	state := ""
+	if s.Removed {
+		state = " (gone)"
+	}
+	return fmt.Sprintf("%s%s\n  %s:%d %s\n  %s", s.Instance, state, s.Host, s.Port, strings.Join(s.Addrs, " "), s.URL), nil
 }
 
-func newDiscoverCmd(opts *options) *cobra.Command {
+func (s *Service) TableHeaders() []string {
+	return []string{"INSTANCE", "HOST", "PORT", "URL", "REMOVED"}
+}
+func (s *Service) TableRows() [][]string {
+	return [][]string{{s.Instance, s.Host, strconv.Itoa(s.Port), s.URL, strconv.FormatBool(s.Removed)}}
+}
+
+type discoverConfig struct {
+	Wait     time.Duration `flag:"wait" desc:"How long to listen for answers"`
+	Subtypes []string      `flag:"subtype" desc:"Only servers of these function-set subtypes, such as derp or edev"`
+	Format   string        `flag:"format" env:"IEEE20305CTL_FORMAT" desc:"Output format: text, json or table"`
+}
+
+func newDiscoverCmd() *cobra.Command {
+	c := discoverConfig{Wait: 5 * time.Second, Format: "text"}
 	cmd := &cobra.Command{
 		Use:   "discover",
-		Short: "Discover server capabilities and resources",
-		Long: `Connect to an IEEE 2030.5 server, retrieve its DeviceCapability resource,
-and list the function sets it links to with their hrefs and, for lists,
-their number of items.`,
+		Short: "Find IEEE 2030.5 servers on the local network with DNS-SD",
+		Long: `Browse the local network with multicast DNS for IEEE 2030.5 servers (_smartenergy._tcp,
+or the function-set subtypes of --subtype) for --wait, and write one record per server
+found, with the URL of its DeviceCapability. Needs a network with multicast: it finds
+nothing across routers or in most container networks.`,
+		Example: `  ieee20305ctl client discover --wait 10s
+  ieee20305ctl client discover --subtype derp --format json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			f, err := format.Parse(cmd.Flag("output").Value.String())
-			if err != nil {
-				return errs.WithCode(errs.ExitUsage, err)
-			}
-			d, err := discover(cmd.Context(), opts)
-			if f == format.JSON {
-				if err != nil {
-					_ = format.WriteJSONError(cmd.OutOrStdout(), err)
-					return err
+			return runner.RunStream(cmd, c.Format, func() error {
+				if c.Wait <= 0 {
+					return errs.InvalidInput(errs.CodeInvalidInput, "--wait must be positive", nil)
 				}
-				return format.WriteJSON(cmd.OutOrStdout(), d)
-			}
-			if err != nil {
-				return err
-			}
-			return printDiscovery(cmd.OutOrStdout(), d)
+				return nil
+			}, func(ctx context.Context, out *format.StreamWriter) (int, error) {
+				ctx, cancel := context.WithTimeout(ctx, c.Wait)
+				defer cancel()
+				found, err := discovery.Browse(ctx, discovery.BrowseOptions{Subtypes: c.Subtypes})
+				if err != nil {
+					return 0, errs.New(errs.KindTransport, errs.CodeListenFailed, "DNS-SD: "+err.Error(), err)
+				}
+				for s := range found {
+					rec := &Service{Instance: s.Instance, Host: s.Host, Port: s.Port, Addrs: []string{}, Subtypes: s.Subtypes, Removed: s.Removed}
+					for _, a := range s.Addrs {
+						rec.Addrs = append(rec.Addrs, a.String())
+					}
+					if u, err := s.DcapURL(); err == nil {
+						rec.URL = u
+					}
+					if err := out.Write(rec); err != nil {
+						return 0, errs.Output(errs.CodeOutputWriteFailed, err)
+					}
+				}
+				return errs.ExitOK, nil
+			})
 		},
 	}
-	format.AddFlag(cmd)
+	runner.RegisterCommandCfg(cmd, &c)
 	return cmd
-}
-
-func discover(ctx context.Context, opts *options) (*Discovery, error) {
-	c, _, err := opts.connect()
-	if err != nil {
-		return nil, err
-	}
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	ctx, cancel := context.WithTimeout(ctx, opts.timeout)
-	defer cancel()
-	dc, err := c.DeviceCapability(ctx)
-	if err != nil {
-		return nil, classify(err)
-	}
-	u, err := c.Resolve(opts.dcap)
-	if err != nil {
-		return nil, classify(err)
-	}
-	return &Discovery{URL: u.String(), PollRate: uint32(dc.GetPollRate()), Links: links(dc)}, nil
-}
-
-var hrefType = reflect.TypeOf("")
-
-// links returns the links of a generated resource type in schema order:
-// every non-nil field that points to a struct with an Href.
-func links(v any) []Link {
-	var out []Link
-	var walk func(reflect.Value)
-	walk = func(rv reflect.Value) {
-		rt := rv.Type()
-		for i := 0; i < rt.NumField(); i++ {
-			f, fv := rt.Field(i), rv.Field(i)
-			if !f.IsExported() {
-				continue
-			}
-			if f.Anonymous && fv.Kind() == reflect.Struct {
-				walk(fv)
-				continue
-			}
-			if fv.Kind() != reflect.Pointer || fv.IsNil() || fv.Elem().Kind() != reflect.Struct {
-				continue
-			}
-			target := fv.Elem()
-			href := target.FieldByName("Href")
-			if !href.IsValid() || href.Type() != hrefType {
-				continue
-			}
-			l := Link{Name: elementName(f), Href: href.String()}
-			if all := target.FieldByName("All"); all.IsValid() && all.Kind() == reflect.Pointer && !all.IsNil() {
-				n := uint32(all.Elem().Uint())
-				l.All = &n
-			}
-			out = append(out, l)
-		}
-	}
-	rv := reflect.ValueOf(v)
-	if rv.Kind() == reflect.Pointer {
-		rv = rv.Elem()
-	}
-	walk(rv)
-	return out
-}
-
-// elementName returns the XML local name in the tag of a generated field.
-func elementName(f reflect.StructField) string {
-	tag, _, _ := strings.Cut(f.Tag.Get("xml"), ",")
-	if i := strings.LastIndexByte(tag, ' '); i >= 0 {
-		tag = tag[i+1:]
-	}
-	if tag == "" {
-		return f.Name
-	}
-	return tag
-}
-
-func printDiscovery(w io.Writer, d *Discovery) error {
-	if _, err := fmt.Fprintf(w, "DeviceCapability: %s\nPoll rate:        %d s\n\n", d.URL, d.PollRate); err != nil {
-		return err
-	}
-	if len(d.Links) == 0 {
-		_, err := fmt.Fprintln(w, "The server links no function sets.")
-		return err
-	}
-	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	_, _ = fmt.Fprintln(tw, "FUNCTION SET\tHREF\tITEMS")
-	for _, l := range d.Links {
-		items := ""
-		if l.All != nil {
-			items = fmt.Sprint(*l.All)
-		}
-		_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\n", l.Name, l.Href, items)
-	}
-	return tw.Flush()
 }

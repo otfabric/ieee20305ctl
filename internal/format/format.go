@@ -1,88 +1,52 @@
 // SPDX-License-Identifier: MIT
 
-// Package format provides output formatting support for ieee20305ctl.
 package format
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"strings"
-
-	"github.com/spf13/cobra"
 )
 
-// Format represents an output format type.
-type Format string
+// OutputFormat selects how CLI results are rendered to stdout.
+type OutputFormat string
 
-// Supported output formats.
 const (
-	Text  Format = "text"
-	Table Format = "table"
-	JSON  Format = "json"
+	FormatText  OutputFormat = "text"
+	FormatJSON  OutputFormat = "json"
+	FormatTable OutputFormat = "table"
 )
 
-// String returns the format as a string.
-func (f Format) String() string {
-	return string(f)
+// Canonical stdout format strings (single source for parse, completion keys, tests).
+var outputFormatValues = []string{string(FormatText), string(FormatJSON), string(FormatTable)}
+
+// Short descriptions for shell completion (keys must match outputFormatValues).
+var outputFormatDescriptions = map[string]string{
+	string(FormatText):  "human-readable default",
+	string(FormatJSON):  "machine-readable structured output",
+	string(FormatTable): "human-readable tabular output",
 }
 
-// Valid reports whether f is a supported format.
-func (f Format) Valid() bool {
+// ValueDescriptions maps each legal stdout format string to a short completion hint.
+// The returned map is a shallow copy; mutating it does not affect canonical definitions.
+func ValueDescriptions() map[string]string {
+	out := make(map[string]string, len(outputFormatDescriptions))
+	for k, v := range outputFormatDescriptions {
+		out[k] = v
+	}
+	return out
+}
+
+// Parse normalizes and validates a user-provided format string.
+// Empty or whitespace-only strings default to [FormatText] (CLI default / unset env).
+func Parse(s string) (OutputFormat, error) {
+	f := OutputFormat(strings.ToLower(strings.TrimSpace(s)))
+	if f == "" {
+		return FormatText, nil
+	}
 	switch f {
-	case Text, Table, JSON:
-		return true
+	case FormatText, FormatJSON, FormatTable:
+		return f, nil
 	default:
-		return false
+		return "", fmt.Errorf("invalid format %q (expected: %s)", s, strings.Join(outputFormatValues, ", "))
 	}
-}
-
-// Parse parses a format string, returning an error if it is not supported.
-func Parse(s string) (Format, error) {
-	f := Format(strings.ToLower(strings.TrimSpace(s)))
-	if !f.Valid() {
-		return "", fmt.Errorf("unsupported output format %q (use text, table, or json)", s)
-	}
-	return f, nil
-}
-
-// AddFlag adds an --output flag to the given command and returns a pointer to
-// the format value. The default is Text.
-func AddFlag(cmd *cobra.Command) *string {
-	var output string
-	cmd.Flags().StringVarP(&output, "output", "o", string(Text),
-		"output format: text, table, json")
-	return &output
-}
-
-// envelope is the JSON document of every command; see docs/json-output.md.
-type envelope struct {
-	Status string `json:"status"`
-	Data   any    `json:"data,omitempty"`
-	Error  string `json:"error,omitempty"`
-}
-
-// WriteJSON writes data as a successful JSON result.
-func WriteJSON(w io.Writer, data any) error {
-	return writeEnvelope(w, envelope{Status: "ok", Data: data})
-}
-
-// WriteJSONError writes err as a failed JSON result.
-func WriteJSONError(w io.Writer, err error) error {
-	return writeEnvelope(w, envelope{Status: "error", Error: err.Error()})
-}
-
-// WriteJSONResult writes data as the result of a command, which failed when
-// err is not nil: a failed result that still carries what the command found.
-func WriteJSONResult(w io.Writer, data any, err error) error {
-	if err == nil {
-		return WriteJSON(w, data)
-	}
-	return writeEnvelope(w, envelope{Status: "error", Data: data, Error: err.Error()})
-}
-
-func writeEnvelope(w io.Writer, e envelope) error {
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
-	return enc.Encode(e)
 }

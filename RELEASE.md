@@ -4,6 +4,28 @@ Releases are cut with the `Release` workflow (semantic versioning, annotated
 tag, GitHub release with binaries for every platform). The section of the
 version below, up to the `---` that ends it, is the release's notes.
 
+## v0.2.0
+
+**Date:** unreleased  
+**Previous release:** v0.1.0
+
+### Summary
+
+Device registration, on [go-ieee20305](https://github.com/otfabric/go-ieee20305)
+v0.3.0.
+
+### Added
+
+- **`client register`:** Makes sure the server has an EndDevice for the
+  device, identified by the SFDI and LFDI of its certificate: looks it up in
+  the server's EndDeviceList (with the `sFDI` query parameter, and through
+  every page when a server ignores it) and creates it when absent, unless
+  **`--no-create`**. Reads the device's Registration and, with **`--pin`**,
+  checks the PIN given out of band. An unregistered device or a PIN mismatch
+  exits with status 1; with `-o json` the failed result keeps what was found.
+
+---
+
 ## v0.1.0
 
 **Date:** 2026-10-22  
@@ -47,7 +69,7 @@ mutual TLS.
   suites; a server that accepts only CCM_8 refuses the connection.
 - `validate` does not report a required element or attribute that is absent:
   it decodes to its zero value.
-- `client register`, `programs`, `controls` and `report`, and `server`, are
+- `client programs`, `controls` and `report`, and `server`, are
   not implemented yet.
 
 ---

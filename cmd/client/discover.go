@@ -63,7 +63,7 @@ their number of items.`,
 }
 
 func discover(ctx context.Context, opts *options) (*Discovery, error) {
-	c, err := opts.connect()
+	c, _, err := opts.connect()
 	if err != nil {
 		return nil, err
 	}

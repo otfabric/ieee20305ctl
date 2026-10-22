@@ -33,23 +33,24 @@ func serverURL(host string) (string, error) {
 	return "https://" + cli.ParseAddress(host, "443"), nil
 }
 
-// connect builds the IEEE 2030.5 client the flags describe.
-func (o *options) connect() (*ieeeclient.Client, error) {
+// connect builds the IEEE 2030.5 client the flags describe, and returns the
+// identity of its device certificate.
+func (o *options) connect() (*ieeeclient.Client, ieeeclient.Identity, error) {
 	server, err := serverURL(o.host)
 	if err != nil {
-		return nil, err
+		return nil, ieeeclient.Identity{}, err
 	}
 	if o.certFile == "" || o.keyFile == "" {
-		return nil, errs.WithCode(errs.ExitUsage, errors.New("--cert and --key are required: IEEE 2030.5 servers authenticate the device by its certificate"))
+		return nil, ieeeclient.Identity{}, errs.WithCode(errs.ExitUsage, errors.New("--cert and --key are required: IEEE 2030.5 servers authenticate the device by its certificate"))
 	}
 	cert, err := cli.LoadTLSCertificate(o.certFile, o.keyFile)
 	if err != nil {
-		return nil, errs.WithCode(errs.ExitCertificate, err)
+		return nil, ieeeclient.Identity{}, errs.WithCode(errs.ExitCertificate, err)
 	}
 	var roots *x509.CertPool
 	if o.caFile != "" {
 		if roots, err = cli.LoadCACertPool(o.caFile); err != nil {
-			return nil, errs.WithCode(errs.ExitCertificate, err)
+			return nil, ieeeclient.Identity{}, errs.WithCode(errs.ExitCertificate, err)
 		}
 	}
 	c, err := ieeeclient.New(ieeeclient.Config{
@@ -59,9 +60,9 @@ func (o *options) connect() (*ieeeclient.Client, error) {
 		UserAgent:            "ieee20305ctl",
 	})
 	if err != nil {
-		return nil, errs.WithCode(errs.ExitUsage, err)
+		return nil, ieeeclient.Identity{}, errs.WithCode(errs.ExitUsage, err)
 	}
-	return c, nil
+	return c, ieeeclient.IdentityOf(cert.Leaf), nil
 }
 
 // classify maps the failure of a call to a server to an exit code: no

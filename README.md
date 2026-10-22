@@ -28,6 +28,14 @@ ieee20305ctl client discover --host utility.example:8443 --cert pki/device-1.pem
 
 `client discover` connects with mutual TLS, retrieves the server's DeviceCapability resource (`--dcap`, `/dcap` by default) and lists the function sets it links to, with their hrefs and, for lists, their number of items. A connection failure exits with status 3, a certificate either side refuses with status 4. IEEE 2030.5 requires the cipher suite TLS_ECDHE_ECDSA_WITH_AES_128_CCM_8, which Go does not implement; the client offers the other ECDHE-ECDSA suites, so a server that accepts only CCM_8 refuses the connection.
 
+## Registering a device
+
+```bash
+ieee20305ctl client register --host utility.example:8443 --cert pki/device-1.pem --key pki/device-1.key --ca pki/ca.pem --pin 111115
+```
+
+`client register` makes sure the server has an EndDevice for the device, identified by the SFDI and LFDI of its certificate: it looks it up in the server's EndDeviceList and creates it when absent (`--no-create` only looks it up). It then reads the device's Registration and, with `--pin`, checks that the server registered the PIN the device was given out of band. An unregistered device or a PIN mismatch exits with status 1.
+
 ## Validating documents
 
 ```bash

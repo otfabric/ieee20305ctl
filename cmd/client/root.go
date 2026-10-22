@@ -43,24 +43,12 @@ the server with --ca, or with the system roots when --ca is not given.`,
 	f.DurationVar(&opts.timeout, "timeout", 30*time.Second, "time limit of the command")
 
 	cmd.AddCommand(newDiscoverCmd(opts))
-	cmd.AddCommand(newRegisterCmd())
+	cmd.AddCommand(newRegisterCmd(opts))
 	cmd.AddCommand(newProgramsCmd())
 	cmd.AddCommand(newControlsCmd())
 	cmd.AddCommand(newReportCmd())
 
 	return cmd
-}
-
-// newRegisterCmd returns the register subcommand.
-func newRegisterCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:   "register",
-		Short: "Register an EndDevice with the server",
-		Long:  `Register a new EndDevice resource on the IEEE 2030.5 server using the device certificate identity.`,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return fmt.Errorf("client register: not implemented")
-		},
-	}
 }
 
 // newProgramsCmd returns the programs subcommand.

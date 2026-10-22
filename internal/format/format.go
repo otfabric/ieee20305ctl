@@ -4,7 +4,9 @@
 package format
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -51,4 +53,27 @@ func AddFlag(cmd *cobra.Command) *string {
 	cmd.Flags().StringVarP(&output, "output", "o", string(Text),
 		"output format: text, table, json")
 	return &output
+}
+
+// envelope is the JSON document of every command; see docs/json-output.md.
+type envelope struct {
+	Status string `json:"status"`
+	Data   any    `json:"data,omitempty"`
+	Error  string `json:"error,omitempty"`
+}
+
+// WriteJSON writes data as a successful JSON result.
+func WriteJSON(w io.Writer, data any) error {
+	return writeEnvelope(w, envelope{Status: "ok", Data: data})
+}
+
+// WriteJSONError writes err as a failed JSON result.
+func WriteJSONError(w io.Writer, err error) error {
+	return writeEnvelope(w, envelope{Status: "error", Error: err.Error()})
+}
+
+func writeEnvelope(w io.Writer, e envelope) error {
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	return enc.Encode(e)
 }

@@ -51,6 +51,6 @@ func (inv *Invocation) WriteJSON(v any) error {
 // Debugf writes a formatted debug message to stderr when debug mode is enabled.
 func (inv *Invocation) Debugf(msg string, args ...any) {
 	if inv.Debug {
-		fmt.Fprintf(inv.Stderr, "DEBUG: "+msg+"\n", args...)
+		_, _ = fmt.Fprintf(inv.Stderr, "DEBUG: "+msg+"\n", args...)
 	}
 }

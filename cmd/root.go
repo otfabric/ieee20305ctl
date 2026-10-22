@@ -4,6 +4,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -37,6 +38,11 @@ func SetBuildMeta(version, tag, commit, buildDate string) {
 func Execute() int {
 	root := NewRootCmd()
 	if err := root.Execute(); err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, "ieee20305ctl:", err)
+		var coded *errs.ExitCodeError
+		if errors.As(err, &coded) {
+			return coded.Code
+		}
 		return errs.ExitError
 	}
 	return errs.ExitOK
@@ -54,11 +60,6 @@ It provides client and server commands for IEEE 2030.5 (SEP2) smart-grid
 communication, along with certificate management and XML validation utilities.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
-		PersistentPreRun: func(cmd *cobra.Command, _ []string) {
-			if debug {
-				fmt.Fprintln(cmd.ErrOrStderr(), "debug mode enabled")
-			}
-		},
 	}
 
 	root.PersistentFlags().BoolVar(&debug, "debug", false, "enable debug output")
@@ -68,7 +69,7 @@ communication, along with certificate management and XML validation utilities.`,
 	root.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		cmd.SetContext(ctx)
 		if debug {
-			fmt.Fprintln(cmd.ErrOrStderr(), "debug mode enabled")
+			_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "debug mode enabled")
 		}
 		return nil
 	}
@@ -110,12 +111,12 @@ func newVersionCmd() *cobra.Command {
 		Long:  `Print version, tag, commit, build date, and Go runtime information.`,
 		Args:  cobra.NoArgs,
 		Run: func(cmd *cobra.Command, _ []string) {
-			fmt.Fprintf(cmd.OutOrStdout(), "ieee20305ctl %s\n", buildVersion)
-			fmt.Fprintf(cmd.OutOrStdout(), "  tag:       %s\n", buildTag)
-			fmt.Fprintf(cmd.OutOrStdout(), "  commit:    %s\n", buildCommit)
-			fmt.Fprintf(cmd.OutOrStdout(), "  built:     %s\n", buildBuildDate)
-			fmt.Fprintf(cmd.OutOrStdout(), "  go:        %s\n", runtime.Version())
-			fmt.Fprintf(cmd.OutOrStdout(), "  os/arch:   %s/%s\n", runtime.GOOS, runtime.GOARCH)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "ieee20305ctl %s\n", buildVersion)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "  tag:       %s\n", buildTag)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "  commit:    %s\n", buildCommit)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "  built:     %s\n", buildBuildDate)
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "  go:        %s\n", runtime.Version())
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "  os/arch:   %s/%s\n", runtime.GOOS, runtime.GOARCH)
 		},
 	}
 }

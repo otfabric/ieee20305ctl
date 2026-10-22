@@ -72,6 +72,15 @@ func WriteJSONError(w io.Writer, err error) error {
 	return writeEnvelope(w, envelope{Status: "error", Error: err.Error()})
 }
 
+// WriteJSONResult writes data as the result of a command, which failed when
+// err is not nil: a failed result that still carries what the command found.
+func WriteJSONResult(w io.Writer, data any, err error) error {
+	if err == nil {
+		return WriteJSON(w, data)
+	}
+	return writeEnvelope(w, envelope{Status: "error", Data: data, Error: err.Error()})
+}
+
 func writeEnvelope(w io.Writer, e envelope) error {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")

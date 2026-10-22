@@ -90,19 +90,6 @@ communication, along with certificate management and XML validation utilities.`,
 	return root
 }
 
-// newValidateCmd returns the validate subcommand.
-func newValidateCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:   "validate [file...]",
-		Short: "Validate IEEE 2030.5 XML resources offline",
-		Long:  `Validate one or more IEEE 2030.5 XML resource files against the schema.`,
-		Args:  cobra.MinimumNArgs(1),
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return fmt.Errorf("validate: not implemented")
-		},
-	}
-}
-
 // newVersionCmd returns the version subcommand.
 func newVersionCmd() *cobra.Command {
 	return &cobra.Command{

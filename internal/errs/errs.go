@@ -19,6 +19,10 @@ const (
 
 	// ExitCertificate indicates a certificate-related error (missing, invalid, expired).
 	ExitCertificate = 4
+
+	// ExitInvalid indicates that a document does not satisfy the IEEE 2030.5
+	// schema.
+	ExitInvalid = 5
 )
 
 // ExitCodeError wraps an error with a specific exit code.

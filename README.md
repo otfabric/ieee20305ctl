@@ -20,4 +20,14 @@ ieee20305ctl cert inspect pki/server.pem
 ieee20305ctl cert lfdi pki/device-1.pem -o json
 ```
 
+## Validating documents
+
+```bash
+ieee20305ctl validate --profile csipaus derctl.xml edev.xml
+```
+
+`validate` decodes IEEE 2030.5-2023 documents, or CSIP-AUS v1.3 documents with `--profile csipaus`, and checks them against the constraints of the schema: cardinalities, string and binary lengths, numeric ranges and patterns. It exits with status 5 when a document is invalid. A required element or attribute that is absent decodes to its zero value and is not reported; use the official XSD for that.
+
+## Output
+
 Every command accepts `-o json` for a [JSON result](docs/json-output.md), and exits with the [documented exit codes](docs/exitcodes.md).

@@ -3,7 +3,7 @@ module github.com/otfabric/ieee20305ctl
 go 1.26.0
 
 require (
-	github.com/otfabric/go-ieee20305 v0.0.0-20261022150016-e9d3905ed61b
+	github.com/otfabric/go-ieee20305 v0.1.0
 	github.com/spf13/cobra v1.10.2
 )
 

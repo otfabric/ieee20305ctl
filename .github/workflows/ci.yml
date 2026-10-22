@@ -1,0 +1,16 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    uses: otfabric/.github/.github/workflows/go-ci.yml@v2
+    with:
+      codecov-name: ieee20305ctl
+      go-versions: '["1.26", "1.27"]'
+      test-exclude-regex: "/example(s)?($|/)"
+      coverpkg: ./...

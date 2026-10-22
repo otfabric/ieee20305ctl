@@ -1,0 +1,6 @@
+/release/*
+/bin/*
+/ieee20305ctl
+coverage.*
+.vscode/
+.DS_Store

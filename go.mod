@@ -1,0 +1,12 @@
+module github.com/otfabric/ieee20305ctl
+
+go 1.26.0
+
+require github.com/spf13/cobra v1.10.2
+
+require (
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
+	github.com/spf13/pflag v1.0.9 // indirect
+)
+
+replace github.com/otfabric/go-ieee20305 => ../go-ieee20305

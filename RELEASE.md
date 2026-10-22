@@ -69,7 +69,7 @@ mutual TLS.
   suites; a server that accepts only CCM_8 refuses the connection.
 - `validate` does not report a required element or attribute that is absent:
   it decodes to its zero value.
-- `client programs`, `controls` and `report`, and `server`, are
+- `client register`, `programs`, `controls` and `report`, and `server`, are
   not implemented yet.
 
 ---

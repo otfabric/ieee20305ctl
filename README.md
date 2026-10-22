@@ -20,6 +20,14 @@ ieee20305ctl cert inspect pki/server.pem
 ieee20305ctl cert lfdi pki/device-1.pem -o json
 ```
 
+## Discovering a server
+
+```bash
+ieee20305ctl client discover --host utility.example:8443 --cert pki/device-1.pem --key pki/device-1.key --ca pki/ca.pem
+```
+
+`client discover` connects with mutual TLS, retrieves the server's DeviceCapability resource (`--dcap`, `/dcap` by default) and lists the function sets it links to, with their hrefs and, for lists, their number of items. A connection failure exits with status 3, a certificate either side refuses with status 4. IEEE 2030.5 requires the cipher suite TLS_ECDHE_ECDSA_WITH_AES_128_CCM_8, which Go does not implement; the client offers the other ECDHE-ECDSA suites, so a server that accepts only CCM_8 refuses the connection.
+
 ## Validating documents
 
 ```bash

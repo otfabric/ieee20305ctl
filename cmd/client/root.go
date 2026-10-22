@@ -1,52 +1,54 @@
 // SPDX-License-Identifier: MIT
 
+// Package client implements the client subcommands: an IEEE 2030.5 device
+// talking to a server over HTTPS with mutual TLS.
 package client
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/spf13/cobra"
 )
 
+// options are the connection flags shared by the client subcommands.
+type options struct {
+	host     string
+	dcap     string
+	certFile string
+	keyFile  string
+	caFile   string
+	timeout  time.Duration
+}
+
 // NewClientCmd returns the client subcommand group for IEEE 2030.5 client operations.
 func NewClientCmd() *cobra.Command {
-	var (
-		host     string
-		certFile string
-		keyFile  string
-		caFile   string
-	)
+	opts := &options{}
 
 	cmd := &cobra.Command{
 		Use:   "client",
 		Short: "IEEE 2030.5 client commands",
-		Long:  `Commands for interacting with an IEEE 2030.5 server as a client device.`,
+		Long: `Commands for interacting with an IEEE 2030.5 server as a client device.
+
+The device authenticates with its certificate (--cert, --key), and verifies
+the server with --ca, or with the system roots when --ca is not given.`,
 	}
 
-	cmd.PersistentFlags().StringVar(&host, "host", "", "server host:port")
-	cmd.PersistentFlags().StringVar(&certFile, "cert", "", "path to client TLS certificate")
-	cmd.PersistentFlags().StringVar(&keyFile, "key", "", "path to client TLS private key")
-	cmd.PersistentFlags().StringVar(&caFile, "ca", "", "path to CA certificate for server verification")
+	f := cmd.PersistentFlags()
+	f.StringVar(&opts.host, "host", "", "server as host[:port] (port 443 by default) or https URL")
+	f.StringVar(&opts.dcap, "dcap", "/dcap", "path of the DeviceCapability resource")
+	f.StringVar(&opts.certFile, "cert", "", "path to the device certificate (PEM)")
+	f.StringVar(&opts.keyFile, "key", "", "path to the device private key (PEM)")
+	f.StringVar(&opts.caFile, "ca", "", "path to the CA certificates that verify the server (PEM)")
+	f.DurationVar(&opts.timeout, "timeout", 30*time.Second, "time limit of the command")
 
-	cmd.AddCommand(newDiscoverCmd())
+	cmd.AddCommand(newDiscoverCmd(opts))
 	cmd.AddCommand(newRegisterCmd())
 	cmd.AddCommand(newProgramsCmd())
 	cmd.AddCommand(newControlsCmd())
 	cmd.AddCommand(newReportCmd())
 
 	return cmd
-}
-
-// newDiscoverCmd returns the discover subcommand.
-func newDiscoverCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:   "discover",
-		Short: "Discover server capabilities and resources",
-		Long:  `Connect to an IEEE 2030.5 server and discover its DeviceCapability resource and available function sets.`,
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return fmt.Errorf("client discover: not implemented")
-		},
-	}
 }
 
 // newRegisterCmd returns the register subcommand.

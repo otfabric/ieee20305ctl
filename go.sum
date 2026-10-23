@@ -1,12 +1,10 @@
-github.com/GRIDAPPSD/ieee-2030_5-core-go v0.27.0 h1:wZJo9qw5hPA+QHwNRn7PhSumW4HnMTdGWLnCW3ft00U=
-github.com/GRIDAPPSD/ieee-2030_5-core-go v0.27.0/go.mod h1:dApepO2tCpWeD8xsfvtnaudTm6mZlkZIHmOcj9s7DjE=
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
-github.com/otfabric/go-ieee20305 v0.5.1 h1:g/WBsPjcn1tor120TSfzToHX0x/tfjXWiBi9Yu4yotA=
-github.com/otfabric/go-ieee20305 v0.5.1/go.mod h1:Qd9h8OcVmWAuly18qkBb08fPuF1TgNxSMDBN6QBKn1A=
-github.com/otfabric/go-ieee20305/tlsccm v0.2.0 h1:PAY5vDBhii7kl2UaJQ/OsrjyZo+o6xAcq7GJkHGGJ0A=
-github.com/otfabric/go-ieee20305/tlsccm v0.2.0/go.mod h1:lhcwzMcJ82+9wpTedyEz3R434ZJn5HzyqNWP+OD8FSQ=
+github.com/otfabric/go-ieee20305 v0.5.2 h1:DZyLgIu9ThNuheaC09uUiLczcy/3iWqc8rvqGzUbtxg=
+github.com/otfabric/go-ieee20305 v0.5.2/go.mod h1:Qd9h8OcVmWAuly18qkBb08fPuF1TgNxSMDBN6QBKn1A=
+github.com/otfabric/go-ieee20305/tlsccm v0.3.0 h1:NgKdaqttv/J5NH1dD7MgNJMbIhzqxdwxnMbfkizyxkw=
+github.com/otfabric/go-ieee20305/tlsccm v0.3.0/go.mod h1:F5tBPhNg+k2l0ACUVIGp1nivuVN5mE41GgxSVbpT9BA=
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/spf13/cobra v1.10.2 h1:DMTTonx5m65Ic0GOoRY2c16WCbHxOOw6xxezuLaBpcU=
 github.com/spf13/cobra v1.10.2/go.mod h1:7C1pvHqHw5A4vrJfjNwvOdzYu0Gml16OCs2GRiTUUS4=
@@ -21,5 +19,3 @@ gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
 gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
-pgregory.net/rapid v1.3.0 h1:vBvO0VSqti75J1jjYqpgPNBLKMd1+gxa9fYo7vk/Exc=
-pgregory.net/rapid v1.3.0/go.mod h1:dPlE4OBBxgXPqkP79flB6sJL1dx5azpI7HQ9MY9Z7uk=

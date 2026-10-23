@@ -4,6 +4,29 @@ Releases are cut with the `Release` workflow (semantic versioning, annotated
 tag, GitHub release with binaries for every platform). The section of the
 version below, up to the `---` that ends it, is the release's notes.
 
+## v0.2.1
+
+**Date:** 2026-10-23  
+**Previous release:** v0.2.0
+
+### Summary
+
+On go-ieee20305 v0.5.2 and tlsccm v0.3.0: the binary no longer contains a
+fork of `crypto/tls`, and takes the fixes of the library.
+
+### Changed
+
+- **tlsccm v0.3.0:** the CCM_8 cipher suite of `--ccm8` comes from a copy of
+  Go 1.22.0's `crypto/tls` inside tlsccm, reviewed against every
+  `crypto/tls` vulnerability Go has published since; the ALPN error quotes
+  the client's protocols (GO-2025-4008).
+- **go-ieee20305 v0.5.2:** `client run` takes the default control of the
+  program of highest precedence also when another program has no controls;
+  `server start` fails when its store fails at startup, and answers 500,
+  not 400, for a response it cannot encode.
+
+---
+
 ## v0.2.0
 
 **Date:** 2026-10-23  

@@ -38,7 +38,7 @@ func TestClassify(t *testing.T) {
 		{fmt.Errorf("%w: slow", ieee20305.ErrTimeout), true, errs.KindTimeout, errs.CodeOutcomeUnknown},
 		{fmt.Errorf("%w: down", ieee20305.ErrUnavailable), false, errs.KindTransport, errs.CodeTransportConnectFailed},
 		{fmt.Errorf("%w: junk", ieee20305.ErrProtocol), false, errs.KindProtocol, errs.CodeInvalidResponse},
-		{context.Canceled, false, errs.KindInternal, errs.CodeContextCanceled},
+		{context.Canceled, false, errs.KindInterrupted, errs.CodeContextCanceled},
 		{&net.OpError{Op: "dial", Err: errors.New("refused")}, false, errs.KindTransport, errs.CodeTransportConnectFailed},
 		{errors.New("other"), false, errs.KindTransport, errs.CodeTransportConnectFailed},
 		{fmt.Errorf("%w: remote error: tls: handshake failure", ieee20305.ErrUnavailable), false, errs.KindTransport, errs.CodeTransportTLSFailed},

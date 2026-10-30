@@ -265,7 +265,7 @@ session sets the device once:
 | `IEEE20305CTL_PROFILE`, `IEEE20305CTL_EDITION` | `--profile`, `--edition` |
 | `IEEE20305CTL_TIMEOUT` | `--timeout` |
 | `IEEE20305CTL_PIN` | `--pin` of `client register` and `client run` |
-| `IEEE20305CTL_FORMAT` | `--format` |
+| `IEEE20305CTL_FORMAT` (`IEEE20305CTL_OUTPUT_FORMAT` stays accepted) | `--format` |
 | `IEEE20305CTL_CONTROL_SOCKET` | `--control-socket` |
 | `IEEE20305CTL_LISTEN`, `IEEE20305CTL_SERVER_CERT`, `IEEE20305CTL_SERVER_KEY`, `IEEE20305CTL_SERVER_CONFIG` | `--listen`, `--cert`, `--key`, `--config` of `server start` |
 
@@ -288,6 +288,7 @@ Results go to stdout: text by default, `--format table`, or `--format json`
 | 5 | Timeout |
 | 6 | The server refused (4xx, 5xx), broke the protocol, or has another PIN |
 | 10 | Output or internal error |
+| 130 | Interrupted before a result |
 
 Details, error codes and the JSON error object: [docs/exitcodes.md](docs/exitcodes.md).
 

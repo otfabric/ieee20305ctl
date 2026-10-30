@@ -12,7 +12,8 @@ Every command of ieee20305ctl exits with one of these codes. They are a
 | 5 | `timeout` | No answer in `--timeout` |
 | 6 | `refused` | The server answered with an HTTP error (4xx or 5xx); the `ieee20305` object has the status |
 | 6 | `protocol` | The server broke the protocol, or its answer cannot be trusted: a document that does not decode, a Registration whose PIN is not the device's, a device the server has not registered |
-| 10 | `output`, `internal` | The result could not be written, or ieee20305ctl failed; also an interruption (Ctrl-C) before a one-shot command has its result |
+| 10 | `output`, `internal` | The result could not be written, or ieee20305ctl failed |
+| 130 | `interrupted` | Ctrl-C or SIGTERM before a one-shot command has its result |
 
 `refused` and `protocol` both exit 6: the server was reached and talked to,
 and the answer is not what the command needed.
@@ -58,7 +59,8 @@ With `--format text` or `table` it is one line on stderr: `error: <message>`.
 | `refused` | `not_found` (404), `forbidden` (403), `bad_request` (400), `conflict` (409), `server_error` (5xx), `unavailable` (503, 429), `http_error` (any other status) |
 | `protocol` | `invalid_response`, `pin_mismatch`, `not_registered` |
 | `output` | `json_encode_failed`, `table_render_failed`, `output_write_failed`, `output_file_write_failed` |
-| `internal` | `context_canceled` (interrupted before a result), `internal_unexpected` |
+| `internal` | `internal_unexpected` |
+| `interrupted` | `context_canceled` (interrupted before a result) |
 
 ## Streaming commands
 
@@ -94,3 +96,7 @@ the server may have applied it. Read the resource back before you resend.
 
 The operator commands that change what devices receive (`server
 issue-control`, `cancel`, `set-default`) and `client delete` need `--yes`.
+
+**Organisation table:** these codes follow the OT Fabric CLI exit-code table. ieee20305ctl does not use `1`, `7`, `8` and `9`: they keep their organisation meaning and are not reused for anything else.
+
+**Format variable:** `IEEE20305CTL_FORMAT` is the name to use; `IEEE20305CTL_OUTPUT_FORMAT` stays accepted. When both are set, `IEEE20305CTL_FORMAT` wins.

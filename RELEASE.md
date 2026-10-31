@@ -4,6 +4,18 @@ Releases are cut with the `Release` workflow (semantic versioning, annotated
 tag, GitHub release with binaries for every platform). The section of the
 version below, up to the `---` that ends it, is the release's notes.
 
+## v0.3.1
+
+**Date:** 2026-10-31
+**Previous release:** v0.3.0
+
+### Fixed
+
+- A seed duration in seconds too large for `time.Duration` wrapped silently. It is now an error.
+- Built on go-ieee20305 v0.5.3.
+
+---
+
 ## v0.3.0
 
 **Date:** 2026-10-30

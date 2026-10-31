@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"os"
 	"sort"
 	"strings"
@@ -139,6 +140,9 @@ func (d *Duration) parse(s string) error {
 	var secs int64
 	if _, err := fmt.Sscan(s, &secs); err != nil {
 		return fmt.Errorf("%q is not a duration such as 90s or 1h", s)
+	}
+	if limit := int64(math.MaxInt64 / time.Second); secs > limit || secs < -limit {
+		return fmt.Errorf("%q seconds is too long a duration", s)
 	}
 	*d = Duration(time.Duration(secs) * time.Second)
 	return nil

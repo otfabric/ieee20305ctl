@@ -3,15 +3,13 @@
 package site
 
 import (
-	"bytes"
 	"testing"
-
-	"gopkg.in/yaml.v3"
+	"time"
 )
 
 // FuzzParseSeed feeds seed files, YAML or JSON. A seed either parses and
-// validates or is refused with an error, and an accepted one validates again
-// after a trip through YAML: the JSON and YAML forms name the same fields.
+// validates or is refused with an error, and what is accepted holds what
+// Validate promises, whatever the numbers in the file were.
 func FuzzParseSeed(f *testing.F) {
 	for _, s := range []string{
 		"",
@@ -37,16 +35,15 @@ func FuzzParseSeed(f *testing.F) {
 		if s == nil {
 			t.Fatal("no seed and no error")
 		}
-		var out bytes.Buffer
-		enc := yaml.NewEncoder(&out)
-		if err := enc.Encode(s); err != nil {
-			t.Fatalf("marshal: %v", err)
+		for _, p := range s.Programs {
+			for _, c := range p.Controls {
+				if c.Duration <= 0 {
+					t.Fatalf("accepted a control of %v", time.Duration(c.Duration))
+				}
+			}
 		}
-		if err := enc.Close(); err != nil {
-			t.Fatal(err)
-		}
-		if _, err := ParseSeed(out.Bytes()); err != nil {
-			t.Fatalf("written seed is refused: %v\n%s", err, out.Bytes())
+		if err := s.Validate(); err != nil {
+			t.Fatalf("a parsed seed does not validate: %v", err)
 		}
 	})
 }

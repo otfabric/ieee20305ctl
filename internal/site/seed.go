@@ -150,14 +150,23 @@ func LoadSeed(file string) (*Seed, error) {
 	if err != nil {
 		return nil, err
 	}
+	s, err := ParseSeed(data)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", file, err)
+	}
+	return s, nil
+}
+
+// ParseSeed decodes and validates the content of a seed file.
+func ParseSeed(data []byte) (*Seed, error) {
 	var s Seed
 	dec := yaml.NewDecoder(bytes.NewReader(data))
 	dec.KnownFields(true)
 	if err := dec.Decode(&s); err != nil {
-		return nil, fmt.Errorf("%s: %w", file, err)
+		return nil, err
 	}
 	if err := s.Validate(); err != nil {
-		return nil, fmt.Errorf("%s: %w", file, err)
+		return nil, err
 	}
 	return &s, nil
 }

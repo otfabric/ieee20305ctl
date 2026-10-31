@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"os"
 	"sort"
 	"strings"
@@ -140,6 +141,9 @@ func (d *Duration) parse(s string) error {
 	if _, err := fmt.Sscan(s, &secs); err != nil {
 		return fmt.Errorf("%q is not a duration such as 90s or 1h", s)
 	}
+	if limit := int64(math.MaxInt64 / time.Second); secs > limit || secs < -limit {
+		return fmt.Errorf("%q seconds is too long a duration", s)
+	}
 	*d = Duration(time.Duration(secs) * time.Second)
 	return nil
 }
@@ -150,14 +154,23 @@ func LoadSeed(file string) (*Seed, error) {
 	if err != nil {
 		return nil, err
 	}
+	s, err := ParseSeed(data)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", file, err)
+	}
+	return s, nil
+}
+
+// ParseSeed decodes and validates the content of a seed file.
+func ParseSeed(data []byte) (*Seed, error) {
 	var s Seed
 	dec := yaml.NewDecoder(bytes.NewReader(data))
 	dec.KnownFields(true)
 	if err := dec.Decode(&s); err != nil {
-		return nil, fmt.Errorf("%s: %w", file, err)
+		return nil, err
 	}
 	if err := s.Validate(); err != nil {
-		return nil, fmt.Errorf("%s: %w", file, err)
+		return nil, err
 	}
 	return &s, nil
 }

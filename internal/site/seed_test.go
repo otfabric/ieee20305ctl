@@ -56,3 +56,18 @@ func TestLoadSeed(t *testing.T) {
 		t.Error("a derived mrid")
 	}
 }
+
+// A number of seconds too large for a time.Duration used to wrap around,
+// to a value that has nothing to do with what the file says.
+func TestDurationOverflowIsRefused(t *testing.T) {
+	for _, s := range []string{"3600000000000", "-3600000000000"} {
+		var d Duration
+		if err := d.parse(s); err == nil {
+			t.Errorf("%s: parsed as %v", s, time.Duration(d))
+		}
+	}
+	var d Duration
+	if err := d.parse("9223372036"); err != nil || time.Duration(d) != 9223372036*time.Second {
+		t.Errorf("the largest number of seconds: %v, %v", time.Duration(d), err)
+	}
+}

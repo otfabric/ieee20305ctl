@@ -124,6 +124,11 @@ func validateFile(path string, decode func([]byte) (any, error), elementName fun
 		r.Error = err.Error()
 		return r
 	}
+	return validateDocument(r, data, decode, elementName)
+}
+
+// validateDocument fills in the result for the content of one document.
+func validateDocument(r ValidationResult, data []byte, decode func([]byte) (any, error), elementName func(any) (xml.Name, bool)) ValidationResult {
 	v, err := decode(data)
 	if err != nil {
 		r.Error = err.Error()

@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -164,7 +165,7 @@ func LoadKeyPair(certFile, keyFile string) (tls.Certificate, error) {
 
 // LoadPool loads the CA certificates of a PEM file.
 func LoadPool(file string) (*x509.CertPool, error) {
-	data, err := os.ReadFile(file)
+	data, err := os.ReadFile(filepath.Clean(file))
 	if err != nil {
 		return nil, errs.InvalidInput(errs.CodeInputFileOpenFailed, fmt.Sprintf("the CA certificates %s: %v", file, err), err)
 	}
@@ -177,7 +178,7 @@ func LoadPool(file string) (*x509.CertPool, error) {
 
 // LoadCertificate loads the first certificate of a PEM file.
 func LoadCertificate(file string) (*x509.Certificate, error) {
-	data, err := os.ReadFile(file)
+	data, err := os.ReadFile(filepath.Clean(file))
 	if err != nil {
 		return nil, errs.InvalidInput(errs.CodeInputFileOpenFailed, fmt.Sprintf("the certificate %s: %v", file, err), err)
 	}

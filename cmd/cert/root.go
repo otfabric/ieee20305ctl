@@ -183,7 +183,7 @@ func generate(c generateConfig) ([]GeneratedFile, error) {
 			}
 		}
 	}
-	if err := os.MkdirAll(c.Out, 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Clean(c.Out), 0o750); err != nil {
 		return nil, errs.Output(errs.CodeOutputFileCreateFailed, err)
 	}
 	ca, caKey, err := security.TestCA(c.Org)
@@ -227,7 +227,7 @@ func write(f *GeneratedFile, c *x509.Certificate, key *ecdsa.PrivateKey) error {
 	if err != nil {
 		return errs.Internal(err)
 	}
-	if err := os.WriteFile(f.Cert, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: c.Raw}), 0o644); err != nil {
+	if err := os.WriteFile(f.Cert, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: c.Raw}), 0o600); err != nil {
 		return errs.Output(errs.CodeOutputFileWriteFailed, err)
 	}
 	if err := os.WriteFile(f.Key, pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der}), 0o600); err != nil {
@@ -468,7 +468,7 @@ func load(path string) (*x509.Certificate, error) {
 }
 
 func loadChain(path string) ([]*x509.Certificate, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		return nil, errs.InvalidInput(errs.CodeInputFileOpenFailed, err.Error(), err)
 	}

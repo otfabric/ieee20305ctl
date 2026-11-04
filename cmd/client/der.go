@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -444,7 +445,7 @@ are kept.`,
 // readDocument decodes the XML document of a file in the device's codec,
 // and checks it against the schema.
 func readDocument(d *conn.Device, file string) (any, error) {
-	data, err := os.ReadFile(file)
+	data, err := os.ReadFile(filepath.Clean(file))
 	if err != nil {
 		return nil, errs.InvalidInput(errs.CodeInputFileOpenFailed, fmt.Sprintf("%s: %v", file, err), err)
 	}

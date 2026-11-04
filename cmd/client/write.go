@@ -173,6 +173,7 @@ type subscribeConfig struct {
 	NotifyURL   string        `flag:"notify-url" desc:"URL the server posts notifications to (default: https://<--listen>/notify, which needs a --listen address the server can reach)"`
 	ListenCert  string        `flag:"listen-cert" desc:"Certificate of the listener (default: the device certificate)"`
 	ListenKey   string        `flag:"listen-key" desc:"Key of the listener (default: the device key)"`
+	Anonymous   bool          `flag:"listen-allow-anonymous" desc:"Also take notifications from a peer that presents no certificate, as some servers (GridAPPS-D) post them; anyone who reaches the listener can then post notifications"`
 	Limit       uint32        `flag:"limit" desc:"Most items of a list a notification carries"`
 	Count       int           `flag:"count" desc:"Stop after this many notifications (0: until interrupted or --duration)"`
 	Duration    time.Duration `flag:"duration" desc:"Stop after this long (0: until interrupted or --count)"`
@@ -221,20 +222,28 @@ func (c *subscribeConfig) validate() error {
 }
 
 // listen serves h on --listen over TLS, and returns the listener's URL.
-func listen(ctx context.Context, addr string, cert tls.Certificate, d *conn.Device, h http.Handler) (string, func(), error) {
+// A peer must present a certificate that the device's CAs issued, unless
+// anonymous is set: then a peer without one is taken too.
+func listen(ctx context.Context, addr string, cert tls.Certificate, d *conn.Device, anonymous bool, h http.Handler) (string, func(), error) {
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		return "", nil, errs.New(errs.KindTransport, errs.CodeListenFailed, fmt.Sprintf("listen on %s: %v", addr, err), err)
 	}
 	// A server's notifier presents its server certificate, whose key usage
 	// is not clientAuth: verify it as IEEE 2030.5 does, with any usage.
-	verify := security.VerifyPeerCertificate(security.VerifyOptions{Roots: d.Roots, Usage: x509.ExtKeyUsageAny})
-	cfg := &tls.Config{MinVersion: tls.VersionTLS12, Certificates: []tls.Certificate{cert}, ClientAuth: tls.RequestClientCert,
-		VerifyPeerCertificate: func(raw [][]byte, chains [][]*x509.Certificate) error {
-			if len(raw) == 0 {
-				return nil // some servers, such as GridAPPS-D, present none
+	// The check is in VerifyConnection, which crypto/tls also calls on a
+	// resumed session (VerifyPeerCertificate it skips).
+	auth := tls.RequireAnyClientCert
+	if anonymous {
+		auth = tls.RequestClientCert // some servers, such as GridAPPS-D, present none
+	}
+	opts := security.VerifyOptions{Roots: d.Roots, Usage: x509.ExtKeyUsageAny}
+	cfg := &tls.Config{MinVersion: tls.VersionTLS12, Certificates: []tls.Certificate{cert}, ClientAuth: auth,
+		VerifyConnection: func(cs tls.ConnectionState) error {
+			if len(cs.PeerCertificates) == 0 && anonymous {
+				return nil
 			}
-			return verify(raw, chains)
+			return security.Verify(cs.PeerCertificates, opts)
 		}}
 	hs := &http.Server{Handler: h, ReadHeaderTimeout: 10 * time.Second, TLSConfig: cfg, ErrorLog: quietLog()}
 	go func() { _ = hs.ServeTLS(l, "", "") }()
@@ -277,7 +286,7 @@ func (c *subscribeConfig) run(ctx context.Context, out *format.StreamWriter, res
 	}
 	mux := http.NewServeMux()
 	mux.Handle("/notify", h)
-	local, stop, err := listen(ctx, c.Listen, cert, d, mux)
+	local, stop, err := listen(ctx, c.Listen, cert, d, c.Anonymous, mux)
 	if err != nil {
 		return 0, err
 	}

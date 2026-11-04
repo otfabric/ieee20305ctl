@@ -236,7 +236,7 @@ func (s *Site) IssueControl(ctx context.Context, r ControlRequest) (string, erro
 		c.Description = &d
 	}
 	c.CreationTime = ieee20305.TimeType(s.admin.Now().Unix())
-	c.Interval = ieee20305.DateTimeInterval{Start: ieee20305.TimeType(r.StartAt.Unix()), Duration: ieee20305.UInt32(r.Duration / time.Second)}
+	c.Interval = ieee20305.DateTimeInterval{Start: ieee20305.TimeType(r.StartAt.Unix()), Duration: ieee.Seconds(r.Duration)}
 	if !r.NoResponses {
 		replyTo, flags := s.responses, ieee20305.HexBinary8{schedule.RespondReceived | schedule.RespondSpecific}
 		c.ReplyTo, c.ResponseRequired = &replyTo, &flags
@@ -371,7 +371,7 @@ func (s *Site) addTariff(ctx context.Context, t TariffSeed, start time.Time) err
 			tti.Description = &d
 			tti.CreationTime = ieee20305.TimeType(start.Unix())
 			at := start.Add(time.Duration(iv.Start))
-			tti.Interval = ieee20305.DateTimeInterval{Start: ieee20305.TimeType(at.Unix()), Duration: ieee20305.UInt32(time.Duration(iv.Duration) / time.Second)}
+			tti.Interval = ieee20305.DateTimeInterval{Start: ieee20305.TimeType(at.Unix()), Duration: ieee.Seconds(time.Duration(iv.Duration))}
 			var idoc any = tti
 			if s.aus() {
 				idoc = &csipaus.TimeTariffInterval{TimeTariffInterval: *tti, RateComponentLink: ieee20305.RateComponentLink{Link: ieee20305.Link{Href: rch}}}

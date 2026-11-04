@@ -4,7 +4,9 @@ package client
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
+	"math"
 	"time"
 
 	ieee20305 "github.com/otfabric/go-ieee20305"
@@ -13,6 +15,7 @@ import (
 
 	"github.com/otfabric/ieee20305ctl/internal/conn"
 	"github.com/otfabric/ieee20305ctl/internal/errs"
+	"github.com/otfabric/ieee20305ctl/internal/ieee"
 	"github.com/otfabric/ieee20305ctl/internal/runner"
 	"github.com/otfabric/ieee20305ctl/internal/types"
 )
@@ -186,6 +189,9 @@ answers with a FlowReservationResponse event, which client run follows.`,
 				if c.Duration <= 0 || c.Start < 0 {
 					return errs.InvalidInput(errs.CodeInvalidInput, "--duration must be positive, and --start not negative", nil)
 				}
+				if c.DurationRequested < 0 || c.DurationRequested > math.MaxUint16*time.Second {
+					return errs.InvalidInput(errs.CodeInvalidInput, "--duration-requested must be between 0 and 65535s (a UInt16 of seconds)", nil)
+				}
 				return nil
 			}, true, func(ctx context.Context, d *conn.Device) (any, error) {
 				_, ed, err := endDevice(ctx, d)
@@ -202,13 +208,13 @@ answers with a FlowReservationResponse event, which client run follows.`,
 					return nil, errs.InvalidInput(errs.CodeInvalidInput, "--power: "+err.Error(), err)
 				}
 				req := &ieee20305.FlowReservationRequest{CreationTime: ieee20305.TimeType(now.Unix()),
-					EnergyRequested:   ieee20305.SignedRealEnergy{Value: ieee20305.Int48(energy), Multiplier: ieee20305.PowerOfTenMultiplierType(emult)},
-					PowerRequested:    ieee20305.ActivePower{Value: ieee20305.Int16(power), Multiplier: ieee20305.PowerOfTenMultiplierType(pmult)},
-					IntervalRequested: ieee20305.DateTimeInterval{Start: ieee20305.TimeType(now.Add(c.Start).Unix()), Duration: ieee20305.UInt32(c.Duration / time.Second)}}
+					EnergyRequested:   ieee20305.SignedRealEnergy{Value: energy, Multiplier: emult},
+					PowerRequested:    ieee20305.ActivePower{Value: power, Multiplier: pmult},
+					IntervalRequested: ieee20305.DateTimeInterval{Start: ieee20305.TimeType(now.Add(c.Start).Unix()), Duration: ieee.Seconds(c.Duration)}}
 				req.MRID = append(ieee20305.MRIDType{}, d.Identity.LFDI[:12]...)
-				req.MRID = append(req.MRID, byte(now.Unix()>>24), byte(now.Unix()>>16), byte(now.Unix()>>8), byte(now.Unix()))
+				req.MRID = binary.BigEndian.AppendUint32(req.MRID, uint32(now.Unix()&0xFFFFFFFF))
 				if c.DurationRequested > 0 {
-					dr := ieee20305.UInt16(c.DurationRequested / time.Second)
+					dr := ieee20305.UInt16(min(max(int64(c.DurationRequested/time.Second), 0), math.MaxUint16))
 					req.DurationRequested = &dr
 				}
 				loc, err := d.Client.Post(ctx, ed.FlowReservationRequestListLink.Href, req)
@@ -224,25 +230,31 @@ answers with a FlowReservationResponse event, which client run follows.`,
 	return cmd
 }
 
-func scale48(v int64) (int64, int64) {
-	m := int64(0)
+// scale48 returns v as an Int48 value and a power-of-ten multiplier,
+// dropping digits of a v that does not fit.
+func scale48(v int64) (ieee20305.Int48, ieee20305.PowerOfTenMultiplierType) {
+	var m ieee20305.PowerOfTenMultiplierType
 	for v > 1<<46 || v < -(1<<46) {
 		v /= 10
 		m++
 	}
-	return v, m
+	return ieee20305.Int48(v), m
 }
 
-func scale16(v int64) (int64, int64, error) {
-	m := int64(0)
-	for v > 32767 || v < -32768 {
+// scale16 returns v as an Int16 value and a power-of-ten multiplier, or an
+// error when that would drop digits.
+func scale16(v int64) (ieee20305.Int16, ieee20305.PowerOfTenMultiplierType, error) {
+	var m ieee20305.PowerOfTenMultiplierType
+	for {
+		if v >= math.MinInt16 && v <= math.MaxInt16 {
+			return ieee20305.Int16(v), m, nil
+		}
 		if v%10 != 0 {
 			return 0, 0, fmt.Errorf("%d W does not fit a value with a power-of-ten multiplier", v)
 		}
 		v /= 10
 		m++
 	}
-	return v, m, nil
 }
 
 func newPricingCmd() *cobra.Command {

@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -150,7 +151,7 @@ func (d *Duration) parse(s string) error {
 
 // LoadSeed reads a seed file.
 func LoadSeed(file string) (*Seed, error) {
-	data, err := os.ReadFile(file)
+	data, err := os.ReadFile(filepath.Clean(file))
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +218,7 @@ func mrid(s, name string) ([]byte, error) {
 	var b [16]byte
 	h := fnv(name)
 	for i := range b {
-		b[i] = byte(h >> (8 * (i % 8)))
+		b[i] = byte(h >> (8 * (i % 8)) & 0xff)
 		if i == 7 {
 			h = fnv(fmt.Sprint(h))
 		}

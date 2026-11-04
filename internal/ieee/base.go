@@ -211,7 +211,13 @@ func intOf(v reflect.Value) int64 {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return v.Int()
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return int64(v.Uint())
+		// No field of the schema is a UInt64 above math.MaxInt64; saturate
+		// rather than show it negative.
+		u := v.Uint()
+		if u > math.MaxInt64 {
+			return math.MaxInt64
+		}
+		return int64(u)
 	default:
 		return 0
 	}

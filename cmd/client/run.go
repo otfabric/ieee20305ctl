@@ -32,6 +32,7 @@ type runConfig struct {
 	PostRate   time.Duration `flag:"post-rate" desc:"Rate of the metering reports of --report-power"`
 	Listen     string        `flag:"notify-listen" desc:"Serve a notification listener on this address and subscribe to the device's programs (needs --notify-url when the address is not reachable as is)"`
 	NotifyURL  string        `flag:"notify-url" desc:"URL the server posts notifications to"`
+	Anonymous  bool          `flag:"notify-allow-anonymous" desc:"Also take notifications from a peer that presents no certificate, as some servers (GridAPPS-D) post them; anyone who reaches the listener can then post notifications"`
 	Subscribed time.Duration `flag:"subscribed-poll-rate" desc:"Poll rate while subscribed"`
 	Polls      bool          `flag:"polls" desc:"Write a record for each poll too, not only for failed ones"`
 }
@@ -197,7 +198,7 @@ func (c *runConfig) run(ctx context.Context, out *format.StreamWriter) (int, err
 	if c.Listen != "" {
 		mux := http.NewServeMux()
 		mux.Handle("/notify", a.NotificationHandler())
-		local, stop, err := listen(ctx, c.Listen, d.Cert, d, mux)
+		local, stop, err := listen(ctx, c.Listen, d.Cert, d, c.Anonymous, mux)
 		if err != nil {
 			return 0, err
 		}

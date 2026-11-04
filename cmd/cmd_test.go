@@ -356,6 +356,12 @@ func TestFormats(t *testing.T) {
 	if r := run(t, "client", "flow-reservation", "--power", "100001"); r.code != 3 {
 		t.Errorf("a power that does not fit: %+v", r)
 	}
+	// durationRequested is a UInt16 of seconds: 65536 s used to wrap to 0.
+	for _, d := range []string{"65536s", "-1s"} {
+		if r := run(t, "client", "flow-reservation", "--duration-requested", d); r.code != 3 {
+			t.Errorf("--duration-requested %s: %+v", d, r)
+		}
+	}
 }
 
 // A device of the seed that is not registered yet, then registered by the

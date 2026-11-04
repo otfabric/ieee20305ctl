@@ -169,3 +169,43 @@ func TestControlSocketDoesNotDeleteFiles(t *testing.T) {
 		t.Fatalf("server start deleted or changed the file at --control-socket: %v %q", err, data)
 	}
 }
+
+// cert generate fails, with the output exit code, when it cannot create the
+// output directory or write a certificate or a key, and leaves no
+// temporary file behind.
+func TestCertGenerateWriteFailures(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "a-file")
+	if err := os.WriteFile(file, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{{}, {"--force"}} {
+		// Without --force the check for existing files fails first; with
+		// it, creating the directory does.
+		if r := run(t, append([]string{"cert", "generate", "--out", filepath.Join(file, "pki")}, args...)...); r.code == 0 {
+			t.Errorf("cert generate %v under a file: %+v", args, r)
+		}
+	}
+	// A non-empty directory where a certificate, then a key, goes: with
+	// --force the rename over it fails.
+	for _, name := range []string{"ca.pem", "ca.key"} {
+		out := t.TempDir()
+		blocker := filepath.Join(out, name)
+		if err := os.MkdirAll(filepath.Join(blocker, "x"), 0o750); err != nil {
+			t.Fatal(err)
+		}
+		r := run(t, "cert", "generate", "--out", out, "--devices", "1", "--force")
+		if r.code == 0 {
+			t.Errorf("cert generate over a directory at %s: %+v", name, r)
+		}
+		entries, err := os.ReadDir(out)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, e := range entries {
+			if strings.HasPrefix(e.Name(), ".") {
+				t.Errorf("%s: temporary file %s left behind", name, e.Name())
+			}
+		}
+	}
+}

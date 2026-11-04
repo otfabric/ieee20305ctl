@@ -8,7 +8,9 @@ package site
 import (
 	"bytes"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"path/filepath"
@@ -170,6 +172,14 @@ func ParseSeed(data []byte) (*Seed, error) {
 	if err := dec.Decode(&s); err != nil {
 		return nil, err
 	}
+	// A second document would be dropped without a word.
+	var more yaml.Node
+	if err := dec.Decode(&more); !errors.Is(err, io.EOF) {
+		if err == nil {
+			err = errors.New("a seed is one YAML document; this file has more")
+		}
+		return nil, err
+	}
 	if err := s.Validate(); err != nil {
 		return nil, err
 	}
@@ -200,6 +210,15 @@ func (s *Seed) Validate() error {
 		for j, c := range p.Controls {
 			if c.Duration <= 0 {
 				return fmt.Errorf("programs[%d].controls[%d]: a positive duration is required", i, j)
+			}
+		}
+	}
+	for i, t := range s.Tariffs {
+		for j, rc := range t.RateComponents {
+			for k, iv := range rc.Intervals {
+				if iv.Duration <= 0 {
+					return fmt.Errorf("tariffs[%d].rate_components[%d].intervals[%d]: a positive duration is required", i, j, k)
+				}
 			}
 		}
 	}

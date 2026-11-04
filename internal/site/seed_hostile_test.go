@@ -3,7 +3,6 @@
 package site
 
 import (
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -91,8 +90,6 @@ func indent(s, by string) string {
 // server can serve: it is refused like a control without a positive
 // duration.
 func TestParseSeedRefusesEmptyTariffIntervals(t *testing.T) {
-	skipDefect(t, "Seed.Validate (internal/site/seed.go) checks the durations of controls only: a tariff interval "+
-		"with duration 0s or -1h is accepted and served as a TimeTariffInterval of duration 0")
 	for _, d := range []string{"0s", "-1h"} {
 		seed := "tariffs:\n  - description: T\n    rate_components:\n      - description: C\n        intervals:\n          - description: I\n            duration: " + d + "\n"
 		if _, err := ParseSeed([]byte(seed)); err == nil {
@@ -104,20 +101,8 @@ func TestParseSeedRefusesEmptyTariffIntervals(t *testing.T) {
 // A seed file of two YAML documents is refused: the second would be dropped
 // without a word.
 func TestParseSeedRefusesSecondDocument(t *testing.T) {
-	skipDefect(t, "ParseSeed (internal/site/seed.go) decodes the first YAML document only: what follows a --- "+
-		"line (a second document, or anything at all) is ignored without an error")
 	seed := "poll_rate: 5\n---\nprograms:\n  - description: P\n    controls: [{duration: 1h}]\n"
 	if _, err := ParseSeed([]byte(seed)); err == nil {
 		t.Error("a seed of two documents was accepted")
-	}
-}
-
-// skipDefect skips a test of a known defect, which another change fixes,
-// unless IEEE20305CTL_TEST_DEFECTS=1: then the test runs, and fails until
-// the defect is fixed. The fix removes the call.
-func skipDefect(t *testing.T, defect string) {
-	t.Helper()
-	if os.Getenv("IEEE20305CTL_TEST_DEFECTS") != "1" {
-		t.Skip("DEFECT: " + defect)
 	}
 }

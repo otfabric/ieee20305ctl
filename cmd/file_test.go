@@ -92,10 +92,6 @@ func TestCertGenerateBadOut(t *testing.T) {
 // is not written to where the link points.
 func TestCertGenerateSymlinkAtKeyPath(t *testing.T) {
 	posix(t)
-	skipDefect(t, "cert generate (cmd/cert/root.go generate/write) follows symlinks at its output paths: os.Stat "+
-		"treats a dangling symlink as absent, and os.WriteFile then writes the private key to the link's target "+
-		"(anywhere the user can write); with --force it also writes through a symlink to an existing file and "+
-		"chmods that file 0600. Open with O_EXCL|O_NOFOLLOW (or write a temp file and rename) instead")
 	for _, force := range []bool{false, true} {
 		dir := t.TempDir()
 		elsewhere := filepath.Join(t.TempDir(), "stolen.key")

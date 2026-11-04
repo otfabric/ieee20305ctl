@@ -238,9 +238,6 @@ func TestNotifyListenerRefusesAnonymousPeers(t *testing.T) {
 // Another device of the same CA is not the server: its certificate does not
 // make it a notifier of this device.
 func TestNotifyListenerRefusesAnotherDevice(t *testing.T) {
-	skipDefect(t, "listen() in cmd/client/write.go verifies a notifier's certificate against --ca with any "+
-		"extended key usage, so any device certificate of the same CA (device-2) can post notifications to "+
-		"device-1's listener; client subscribe reports them, client run acts on them")
 	s := startSite(t, "")
 	s.device(t, "1")
 	l := startListener(t, "client", "subscribe", "/derp/1/derc", "--listen", "127.0.0.1:0", "--listen-cert", s.pki+"/server.pem", "--listen-key", s.pki+"/server.key")
@@ -258,8 +255,6 @@ func TestNotifyListenerRefusesAnotherDevice(t *testing.T) {
 // A notification for a subscription the command did not make is not one of
 // its notifications.
 func TestNotifyListenerOnlyItsSubscription(t *testing.T) {
-	skipDefect(t, "client subscribe (cmd/client/write.go run) writes a notification record for any "+
-		"subscriptionURI and resource a notifier posts, not only for the subscription it made")
 	s := startSite(t, "")
 	s.device(t, "1")
 	l := startListener(t, "client", "subscribe", "/derp/1/derc", "--listen", "127.0.0.1:0", "--listen-cert", s.pki+"/server.pem", "--listen-key", s.pki+"/server.key")
@@ -325,9 +320,6 @@ func TestNotifyListenerCount(t *testing.T) {
 // A peer that opens a connection to the listener and sends nothing, or
 // sends a request's headers and then nothing of its body, is cut off.
 func TestNotifyListenerSlowPeer(t *testing.T) {
-	skipDefect(t, "the notification listener (cmd/client/write.go listen) sets ReadHeaderTimeout only: no "+
-		"ReadTimeout or IdleTimeout and no connection limit, so a peer that sends a body slowly, or many such "+
-		"peers, holds connections and goroutines open as long as it likes")
 	s := startSite(t, "")
 	s.device(t, "1")
 	l := startListener(t, "client", "subscribe", "/derp/1/derc", "--listen", "127.0.0.1:0", "--listen-cert", s.pki+"/server.pem", "--listen-key", s.pki+"/server.key")
@@ -345,11 +337,11 @@ func TestNotifyListenerSlowPeer(t *testing.T) {
 	}
 	defer func() { _ = tc.Close() }()
 	_, _ = io.WriteString(tc, "POST /notify HTTP/1.1\r\nHost: x\r\nContent-Type: application/sep+xml\r\nContent-Length: 1000\r\n\r\n<Notif")
-	// The listener should give up on the body well before a minute.
-	_ = tc.SetReadDeadline(time.Now().Add(time.Minute))
+	// The listener gives up on the body after its ReadTimeout (10 s).
+	_ = tc.SetReadDeadline(time.Now().Add(30 * time.Second))
 	_, err = tc.Read(make([]byte, 1))
 	var ne net.Error
 	if errors.As(err, &ne) && ne.Timeout() {
-		t.Fatal("the listener held a stalled request open for a minute")
+		t.Fatal("the listener held a stalled request open for 30 s")
 	}
 }

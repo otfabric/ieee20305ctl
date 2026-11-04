@@ -110,7 +110,7 @@ func fsas(ctx context.Context, d *conn.Device, ed *ieee20305.EndDevice) ([]*ieee
 	if ed.FunctionSetAssignmentsListLink == nil {
 		return nil, nil
 	}
-	err := d.Client.Iterate(ctx, ed.FunctionSetAssignmentsListLink.Href, 50, func(it any) error {
+	err := iterate(ctx, d, ed.FunctionSetAssignmentsListLink.Href, 50, func(it any) error {
 		if f, ok := it.(*ieee20305.FunctionSetAssignments); ok {
 			out = append(out, f)
 		}

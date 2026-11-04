@@ -104,6 +104,24 @@ func (m agentMetrics) OnPoll(d time.Duration, err error) {
 
 func (m agentMetrics) OnEvent(agent.FunctionSet, schedule.Transition) {}
 
+// agentLog turns the agent's report of a failed start, which it retries,
+// into a start_failed record: before the agent has started, polls report
+// nothing. The rest of the agent's log is not written.
+type agentLog struct{ w *lockedWriter }
+
+func (agentLog) Debugf(string, ...any) {}
+func (agentLog) Infof(string, ...any)  {}
+func (l agentLog) Warnf(format string, args ...any) {
+	if strings.HasPrefix(format, "start failed") {
+		l.w.write(&types.Event{Time: now(), Kind: "start_failed", Message: fmt.Sprintf(format, args...)})
+	}
+}
+func (l agentLog) Errorf(format string, args ...any) {
+	if strings.HasPrefix(format, "cannot start") {
+		l.w.write(&types.Event{Time: now(), Kind: "start_failed", Message: fmt.Sprintf(format, args...)})
+	}
+}
+
 func (m agentMetrics) OnResponse(fs agent.FunctionSet, status uint8, err error) {
 	e := &types.Event{Time: now(), Kind: "response", Code: int(status), Status: statusName(status), Resource: fs.String()}
 	if err != nil {
@@ -132,7 +150,9 @@ func (c *runConfig) run(ctx context.Context, out *format.StreamWriter) (int, err
 	var started sync.Once
 	transition := func(fs agent.FunctionSet) func(context.Context, schedule.Transition) error {
 		return func(_ context.Context, t schedule.Transition) error {
-			start, end := t.Event.Start, t.Event.Start.Add(t.Event.Duration)
+			// Within the years JSON can write: a server's event of year 10000
+			// would otherwise stop the stream (json_encode_failed).
+			start, end := unix(ieee20305.TimeType(t.Event.Start.Unix())), unix(ieee20305.TimeType(t.Event.Start.Add(t.Event.Duration).Unix()))
 			program, _, _ := strings.Cut(t.Event.Program, "|")
 			e := &types.Event{Time: now(), Kind: functionSetEvents[fs], Status: t.To.String(), MRID: t.Event.MRID,
 				Resource: program, Start: &start, End: &end}
@@ -177,6 +197,7 @@ func (c *runConfig) run(ctx context.Context, out *format.StreamWriter) (int, err
 			return nil
 		},
 		Metrics: agentMetrics{w: w, polls: c.Polls},
+		Logger:  agentLog{w: w},
 	}
 	if c.Power != 0 {
 		cfg.MirrorUsagePoint = powerMirror(d, "ieee20305ctl", c.Power)

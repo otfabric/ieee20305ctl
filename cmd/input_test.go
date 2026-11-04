@@ -160,8 +160,6 @@ func TestFlowReservationExtremes(t *testing.T) {
 // A --duration under a second is positive, so accepted; it is not posted as
 // an interval of no time.
 func TestFlowReservationSubSecondDuration(t *testing.T) {
-	skipDefect(t, "client flow-reservation (cmd/client/report.go) accepts --duration 500ms (positive) and posts "+
-		"an IntervalRequested of duration 0; refuse it (exit 3) or round up")
 	var dur atomic.Int64
 	dur.Store(-1)
 	newHostile(t, func(hs *hostile, w http.ResponseWriter, r *http.Request) {

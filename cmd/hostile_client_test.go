@@ -358,9 +358,6 @@ func nestedLists(t *testing.T, budget int64) func(hs *hostile, w http.ResponseWr
 // whose every list is as long as the library allows cannot keep a one-shot
 // command going for 100000^n requests.
 func TestHostileNestedListsBounded(t *testing.T) {
-	skipDefect(t, "client pricing (cmd/client/report.go pricing/rateComponent) and client controls/programs "+
-		"(cmd/client/der.go derPrograms/readProgram) bound each list (100000 items) but not the product of nested "+
-		"lists: a hostile server makes them run for 100000^2..^3 requests and hold every item in memory")
 	const budget = 6000 // three lists of the library's 100000 items in pages of 50
 	for _, cmd := range []string{"pricing", "controls", "programs"} {
 		t.Run(cmd, func(t *testing.T) {
@@ -380,9 +377,6 @@ func TestHostileNestedListsBounded(t *testing.T) {
 // or a server down when the command starts) is a failure client run
 // reports while it retries: a record, not silence.
 func TestHostileRunStartFailureIsReported(t *testing.T) {
-	skipDefect(t, "client run (cmd/client/run.go) writes no record while the agent's Start fails and is retried "+
-		"with backoff (Metrics.OnPoll is only called once started, and the agent's log is discarded): against a "+
-		"server that answers 503, or is down at launch, the stream is empty until --duration ends, exit 0")
 	newHostile(t, func(hs *hostile, w http.ResponseWriter, r *http.Request) {
 		if hs.serveBase(t, w, r, nil) {
 			return

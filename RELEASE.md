@@ -4,6 +4,41 @@ Releases are cut with the `Release` workflow (semantic versioning, annotated
 tag, GitHub release with binaries for every platform). The section of the
 version below, up to the `---` that ends it, is the release's notes.
 
+## v0.4.0
+
+**Date:** 2026-11-05
+**Previous release:** v0.3.2
+
+### Summary
+
+A SAST review (gosec, opengrep) and hostile-peer tests. Built on go-ieee20305 v0.6.0. The notification listener is stricter; see Security.
+
+### Security
+
+- `client subscribe` and `client run --notify-listen`: the notification listener took notifications from any peer, with no certificate or with a device certificate of the same CA, so anyone who reached it could post controls the agent acts on. It now requires a server certificate (serverAuth) of the device's CAs. `--listen-allow-anonymous` (subscribe) and `--notify-allow-anonymous` (run) also take peers without a certificate, as GridAPPS-D posts. The check now runs on resumed TLS sessions too.
+- The listener has a 10 s body timeout and a 1 min idle timeout. A peer that stalled a body held the connection open for as long as it liked.
+- `client subscribe` reports only notifications of the subscription it made.
+- `cert generate` no longer writes through a symlink at an output path. A dangling link at `device-1.key` sent the private key to the link's target. Files are written to a temporary file and renamed, with mode 0600, certificates included (they were 0644). The output directory is 0750.
+- `server start` deleted whatever was at `--control-socket`. It now removes only a socket and refuses anything else (exit 4, `control_socket_failed`).
+
+### Fixed
+
+- An infinite power in `--set` or a seed (`opModExpLimW=Inf`, `.inf`) looped forever. It is now an error.
+- `client flow-reservation`: `--duration-requested` above 65535 s wrapped (a UInt16 of seconds), and a `--duration` under a second posted an interval of 0 s. Both are now exit 3.
+- Durations on the wire are clamped to 0..2^32-1 s instead of wrapping.
+- Server times beyond the year 9999 made `client controls`, `pricing` and `run` exit 10 (`json_encode_failed`). They are clamped to 9999-12-31.
+- `client pricing`, `controls` and `programs` read at most 5000 list items in all (exit 6 beyond). Lists within lists were bounded only one by one.
+- `client run` writes a `start_failed` record while the agent cannot start. Before, the stream stayed empty.
+- `--url` in host[:port] form is checked (exit 3). `u.example/dcap` became `https://u.example/dcap:443/dcap`.
+- A seed with a second YAML document, or a tariff interval of no positive duration, is refused.
+- An invalid environment variable is reported in the `--format` asked for.
+
+### Changed
+
+- go-ieee20305 v0.6.0, golang.org/x/crypto v0.58.0, shared workflows v3.3.1, `go fix` applied.
+
+---
+
 ## v0.3.2
 
 **Date:** 2026-10-31

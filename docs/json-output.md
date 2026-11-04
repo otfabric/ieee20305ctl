@@ -160,6 +160,7 @@ has them: `href`, `resource`, `status`, `mrid`, `settings`, `start`, `end`,
 | `default_control` | run | `href`, `settings` |
 | `response`, `response_failed` | run | `code` (the Response status: 1 received, 2 started, 3 completed, 6 cancelled, 7 superseded), `status` (its name), `resource` (the function set); `message` when it failed |
 | `poll`, `poll_failed` | run | `message`: the duration or the error (`poll` only with `--polls`) |
+| `start_failed` | run | `message`: why the agent could not start (it tries again with backoff, or stops when waiting cannot help) |
 | `subscribed`, `unsubscribed` | subscribe | `href` (the Subscription), `resource` |
 | `notification` | subscribe | `resource` (subscribed), `code` and `status` (0 `changed`, or why the server cancelled), `href` and `message` (the document carried) |
 | `notification` | server | `resource` (WADL), `message`: the delivery's duration |

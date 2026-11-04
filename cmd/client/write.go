@@ -229,15 +229,16 @@ func listen(ctx context.Context, addr string, cert tls.Certificate, d *conn.Devi
 	if err != nil {
 		return "", nil, errs.New(errs.KindTransport, errs.CodeListenFailed, fmt.Sprintf("listen on %s: %v", addr, err), err)
 	}
-	// A server's notifier presents its server certificate, whose key usage
-	// is not clientAuth: verify it as IEEE 2030.5 does, with any usage.
 	// The check is in VerifyConnection, which crypto/tls also calls on a
 	// resumed session (VerifyPeerCertificate it skips).
 	auth := tls.RequireAnyClientCert
 	if anonymous {
 		auth = tls.RequestClientCert // some servers, such as GridAPPS-D, present none
 	}
-	opts := security.VerifyOptions{Roots: d.Roots, Usage: x509.ExtKeyUsageAny}
+	// The server's notifier presents its server certificate: serverAuth.
+	// A device certificate of the same CA, clientAuth only, is refused, so
+	// that another device cannot post notifications to this one.
+	opts := security.VerifyOptions{Roots: d.Roots, Usage: x509.ExtKeyUsageServerAuth}
 	cfg := &tls.Config{MinVersion: tls.VersionTLS12, Certificates: []tls.Certificate{cert}, ClientAuth: auth,
 		VerifyConnection: func(cs tls.ConnectionState) error {
 			if len(cs.PeerCertificates) == 0 && anonymous {
@@ -245,7 +246,11 @@ func listen(ctx context.Context, addr string, cert tls.Certificate, d *conn.Devi
 			}
 			return security.Verify(cs.PeerCertificates, opts)
 		}}
-	hs := &http.Server{Handler: h, ReadHeaderTimeout: 10 * time.Second, TLSConfig: cfg, ErrorLog: quietLog()}
+	// A peer that stalls a body or keeps an idle connection is cut off;
+	// a notification is small (the handler takes 1 MiB at most).
+	hs := &http.Server{Handler: h, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 10 * time.Second,
+		WriteTimeout: 30 * time.Second, IdleTimeout: time.Minute, MaxHeaderBytes: 16 << 10,
+		TLSConfig: cfg, ErrorLog: quietLog()}
 	go func() { _ = hs.ServeTLS(l, "", "") }()
 	return "https://" + l.Addr().String() + "/notify", func() { _ = hs.Close() }, nil
 }
@@ -314,11 +319,15 @@ func (c *subscribeConfig) run(ctx context.Context, out *format.StreamWriter, res
 	if err := out.Write(&types.Event{Time: now(), Kind: "subscribed", Href: sub, Resource: resource}); err != nil {
 		return 0, errs.Output(errs.CodeOutputWriteFailed, err)
 	}
-	for n := 0; c.Count == 0 || n < c.Count; n++ {
+	for n := 0; c.Count == 0 || n < c.Count; {
 		select {
 		case <-ctx.Done():
 			return errs.ExitOK, nil
 		case note := <-notes:
+			if !sameHref(note.SubscriptionURI, sub) {
+				continue // not of the subscription this command made
+			}
+			n++
 			ev := &types.Event{Time: now(), Kind: "notification", Resource: note.SubscribedResource, Code: int(note.Status),
 				Status: notificationStatus(note.Status)}
 			if note.Resource != nil && note.Resource.Value != nil {
@@ -333,6 +342,14 @@ func (c *subscribeConfig) run(ctx context.Context, out *format.StreamWriter, res
 		}
 	}
 	return errs.ExitOK, nil
+}
+
+// sameHref reports whether two hrefs name the same resource: by path, as a
+// server may write its href absolute or relative.
+func sameHref(a, b string) bool {
+	ua, err1 := url.Parse(a)
+	ub, err2 := url.Parse(b)
+	return err1 == nil && err2 == nil && ua.Path != "" && ua.Path == ub.Path
 }
 
 func notificationStatus(s ieee20305.UInt8) string {

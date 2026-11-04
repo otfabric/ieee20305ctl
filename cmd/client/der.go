@@ -46,7 +46,7 @@ func derPrograms(ctx context.Context, d *conn.Device) ([]served, error) {
 		if fsa.DERProgramListLink == nil {
 			continue
 		}
-		err := d.Client.Iterate(ctx, fsa.DERProgramListLink.Href, 50, func(it any) error {
+		err := iterate(ctx, d, fsa.DERProgramListLink.Href, 50, func(it any) error {
 			prog, ok := it.(*ieee20305.DERProgram)
 			if !ok || seen[prog.GetHref()] {
 				return nil
@@ -82,7 +82,7 @@ func readProgram(ctx context.Context, d *conn.Device, prog *ieee20305.DERProgram
 		}
 	}
 	if prog.DERControlListLink != nil {
-		err := d.Client.Iterate(ctx, prog.DERControlListLink.Href, 50, func(it any) error {
+		err := iterate(ctx, d, prog.DERControlListLink.Href, 50, func(it any) error {
 			if c, ok := controlOf(it, prog.GetHref()); ok {
 				s.controls = append(s.controls, c)
 				if c.Status == schedule.Active.String() {
@@ -300,7 +300,7 @@ func derResources(ctx context.Context, d *conn.Device, ed *ieee20305.EndDevice) 
 	if ed.DERListLink == nil {
 		return nil, nil
 	}
-	err := d.Client.Iterate(ctx, ed.DERListLink.Href, 10, func(it any) error {
+	err := iterate(ctx, d, ed.DERListLink.Href, 10, func(it any) error {
 		der, ok := it.(*ieee20305.DER)
 		if !ok {
 			return nil

@@ -3,8 +3,6 @@
 package ieee
 
 import (
-	"os"
-	"strings"
 	"testing"
 	"time"
 )
@@ -22,11 +20,6 @@ func FuzzParseSettings(f *testing.F) {
 		f.Add(s)
 	}
 	f.Fuzz(func(t *testing.T, pair string) {
-		if strings.Contains(strings.ToLower(pair), "inf") {
-			// DEFECT: an infinite power loops forever in set; see
-			// TestParseSettingsInfinity. Remove this when it is fixed.
-			return
-		}
 		b, err := ParseSettings([]string{pair})
 		if err != nil {
 			return
@@ -41,11 +34,6 @@ func FuzzParseSettings(f *testing.F) {
 // ParseFloat takes "Inf", and a seed's .inf is "+Inf" by the time it is a
 // pair.
 func TestParseSettingsInfinity(t *testing.T) {
-	if os.Getenv("IEEE20305CTL_TEST_DEFECTS") != "1" {
-		t.Skip("DEFECT: ParseSettings (internal/ieee/base.go set) loops forever on an infinite power: " +
-			"for math.Abs(x) > 32767 { x /= 10 } never ends for x = ±Inf. server issue-control --set opModExpLimW=Inf, " +
-			"or a seed with opModExpLimW: .inf, spins a CPU for ever (server start never listens)")
-	}
 	for _, v := range []string{"Inf", "+Inf", "-inf", "infinity"} {
 		done := make(chan error, 1)
 		go func() {

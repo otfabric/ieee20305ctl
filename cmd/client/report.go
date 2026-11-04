@@ -186,8 +186,8 @@ answers with a FlowReservationResponse event, which client run follows.`,
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return once(cmd, &c.Common, func() error {
-				if c.Duration <= 0 || c.Start < 0 {
-					return errs.InvalidInput(errs.CodeInvalidInput, "--duration must be positive, and --start not negative", nil)
+				if c.Duration < time.Second || c.Start < 0 {
+					return errs.InvalidInput(errs.CodeInvalidInput, "--duration must be at least 1s (the interval is in whole seconds), and --start not negative", nil)
 				}
 				if c.DurationRequested < 0 || c.DurationRequested > math.MaxUint16*time.Second {
 					return errs.InvalidInput(errs.CodeInvalidInput, "--duration-requested must be between 0 and 65535s (a UInt16 of seconds)", nil)
@@ -297,7 +297,7 @@ func pricing(ctx context.Context, d *conn.Device) (*types.Pricing, error) {
 	}
 	res := &types.Pricing{Tariffs: []types.Tariff{}}
 	for _, l := range lists {
-		err := d.Client.Iterate(ctx, l, 50, func(it any) error {
+		err := iterate(ctx, d, l, 50, func(it any) error {
 			var tp *ieee20305.TariffProfile
 			switch x := it.(type) {
 			case *ieee20305.TariffProfile:
@@ -320,7 +320,7 @@ func pricing(ctx context.Context, d *conn.Device) (*types.Pricing, error) {
 				t.RateCode = string(*tp.RateCode)
 			}
 			if tp.RateComponentListLink != nil {
-				if err := d.Client.Iterate(ctx, tp.RateComponentListLink.Href, 50, func(it any) error {
+				if err := iterate(ctx, d, tp.RateComponentListLink.Href, 50, func(it any) error {
 					rc, ok := it.(*ieee20305.RateComponent)
 					if !ok {
 						return nil
@@ -350,7 +350,7 @@ func rateComponent(ctx context.Context, d *conn.Device, rc *ieee20305.RateCompon
 	if rc.TimeTariffIntervalListLink.Href == "" {
 		return comp, nil
 	}
-	err := d.Client.Iterate(ctx, rc.TimeTariffIntervalListLink.Href, 50, func(it any) error {
+	err := iterate(ctx, d, rc.TimeTariffIntervalListLink.Href, 50, func(it any) error {
 		var tti *ieee20305.TimeTariffInterval
 		switch x := it.(type) {
 		case *ieee20305.TimeTariffInterval:
@@ -364,6 +364,9 @@ func rateComponent(ctx context.Context, d *conn.Device, rc *ieee20305.RateCompon
 			DurationS: uint32(tti.Interval.Duration), Status: statusText(&tti.EventStatus), TOUTier: uint8(tti.TouTier)}
 		if tti.ConsumptionTariffIntervalListLink != nil {
 			var ctis ieee20305.ConsumptionTariffIntervalList
+			if err := count(d, tti.ConsumptionTariffIntervalListLink.Href, 1); err != nil {
+				return err
+			}
 			if err := d.Client.GetList(ctx, tti.ConsumptionTariffIntervalListLink.Href, listOne, &ctis); err != nil {
 				return err
 			}

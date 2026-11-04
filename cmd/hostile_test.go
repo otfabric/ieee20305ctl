@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
@@ -150,13 +149,3 @@ func mustCode(t *testing.T, code int, want string, args ...string) result {
 // quietLogger discards the errors of a test server: the client hanging up
 // is what some tests do.
 func quietLogger() *log.Logger { return log.New(io.Discard, "", 0) }
-
-// skipDefect skips a test of a known defect, which another change fixes,
-// unless IEEE20305CTL_TEST_DEFECTS=1: then the test runs, and fails until
-// the defect is fixed. The fix removes the call.
-func skipDefect(t *testing.T, defect string) {
-	t.Helper()
-	if os.Getenv("IEEE20305CTL_TEST_DEFECTS") != "1" {
-		t.Skip("DEFECT: " + defect)
-	}
-}

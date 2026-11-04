@@ -4,8 +4,6 @@ package conn
 
 import (
 	"net/url"
-	"os"
-	"strings"
 	"testing"
 )
 
@@ -25,11 +23,6 @@ func FuzzServerURL(f *testing.F) {
 		if err != nil {
 			return
 		}
-		if !strings.Contains(s, "://") {
-			// DEFECT: the host[:port] form is not checked; see
-			// TestServerURLHostForm. Remove this when it is fixed.
-			return
-		}
 		u, perr := url.Parse(got)
 		if perr != nil {
 			t.Fatalf("ServerURL(%q) = %q, which does not parse: %v", s, got, perr)
@@ -44,12 +37,7 @@ func FuzzServerURL(f *testing.F) {
 // not is invalid_url when the flags are checked, not a URL of another path
 // or a failure when the client is made.
 func TestServerURLHostForm(t *testing.T) {
-	if os.Getenv("IEEE20305CTL_TEST_DEFECTS") != "1" {
-		t.Skip("DEFECT: ServerURL (internal/conn/conn.go) does not check the host[:port] form: \"[::1\" and \"%zz\" " +
-			"give URLs that do not parse (refused only by Connect), and \"u.example/dcap\" gives " +
-			"https://u.example/dcap:443/dcap, a request to path /dcap:443/dcap")
-	}
-	for _, s := range []string{"[::1", "%zz", "u.example/dcap", "u.example:99999", "u.example:", "a b", "u.example?x=1", "u.example#f"} {
+	for _, s := range []string{"[::1", "%zz", "u.example/dcap", "u.example:99999", "u.example:", "a b", "u.example?x=1", "u.example#f", "a\x00b", "u.example:0"} {
 		if got, err := ServerURL(s); err == nil {
 			t.Errorf("ServerURL(%q) = %q, want invalid_url", s, got)
 		}

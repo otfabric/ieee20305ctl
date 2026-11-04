@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -72,7 +73,7 @@ type event struct {
 func events(t *testing.T, s string) []event {
 	t.Helper()
 	var out []event
-	for _, line := range strings.Split(strings.TrimSpace(s), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(s), "\n") {
 		if line == "" {
 			continue
 		}
@@ -86,12 +87,7 @@ func events(t *testing.T, s string) []event {
 }
 
 func has(evs []event, pred func(event) bool) bool {
-	for _, e := range evs {
-		if pred(e) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(evs, pred)
 }
 
 // site is a server start of the tests, with its PKI and control socket.

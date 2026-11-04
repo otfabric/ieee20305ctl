@@ -16,7 +16,7 @@ import (
 // Numeric and bool fields use reflect.Value.Addr().Interface().(*T) with the matching
 // pflag *Var function — no unsafe.Pointer casts. Supported kinds: string, bool, []string,
 // uint8–uint64, int, int8–int64, uint, float64 and time.Duration.
-func RegisterFlags(cmd *cobra.Command, cfg interface{}) {
+func RegisterFlags(cmd *cobra.Command, cfg any) {
 	v := reflect.ValueOf(cfg).Elem()
 	t := v.Type()
 
@@ -40,7 +40,7 @@ func RegisterFlags(cmd *cobra.Command, cfg interface{}) {
 		}
 
 		fv := v.Field(i)
-		if field.Type == reflect.TypeOf(time.Duration(0)) {
+		if field.Type == reflect.TypeFor[time.Duration]() {
 			cmd.Flags().DurationVar(fv.Addr().Interface().(*time.Duration), flagName, time.Duration(fv.Int()), desc)
 			continue
 		}

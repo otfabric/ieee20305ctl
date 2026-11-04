@@ -182,7 +182,14 @@ func elementName(v any) string {
 	return fmt.Sprintf("%T", v)
 }
 
-func unix(t ieee20305.TimeType) time.Time { return time.Unix(int64(t), 0).UTC() }
+// unix is t as a time. A server's time outside years 1 to 9999, which the
+// JSON output cannot hold, saturates at the nearer end of that range.
+func unix(t ieee20305.TimeType) time.Time {
+	return time.Unix(min(max(int64(t), minUnix), maxUnix), 0).UTC()
+}
+
+// minUnix and maxUnix are 0001-01-01T00:00:00Z and 9999-12-31T23:59:59Z.
+const minUnix, maxUnix = -62135596800, 253402300799
 
 // confirmed refuses a command that changes the server without --yes.
 func confirmed(yes bool, what string) error {

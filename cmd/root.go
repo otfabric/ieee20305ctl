@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"slices"
 	"strings"
 	"syscall"
 
@@ -18,7 +19,9 @@ import (
 	"github.com/otfabric/ieee20305ctl/cmd/cert"
 	"github.com/otfabric/ieee20305ctl/cmd/client"
 	"github.com/otfabric/ieee20305ctl/cmd/server"
+	"github.com/otfabric/ieee20305ctl/internal/config"
 	"github.com/otfabric/ieee20305ctl/internal/errs"
+	"github.com/otfabric/ieee20305ctl/internal/format"
 	"github.com/otfabric/ieee20305ctl/internal/runner"
 )
 
@@ -138,7 +141,12 @@ func Execute() int {
 func Run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	root, err := buildRoot()
 	if err != nil {
-		return runner.RenderFatal(nil, err, stdout, stderr, false)
+		// No command parsed its flags: render the error in the format they ask for.
+		inv := &runner.Invocation{}
+		if f, ferr := format.Parse(requestedFormat(args)); ferr == nil {
+			inv.SetOutputFormat(f)
+		}
+		return runner.RenderFatal(inv, err, stdout, stderr, slices.Contains(args, "--debug"))
 	}
 	root.SetArgs(args)
 	root.SetIn(stdin)
@@ -176,4 +184,24 @@ func usageError(err error) error {
 		return err
 	}
 	return errs.New(errs.KindUsage, errs.CodeInvalidInput, err.Error(), err)
+}
+
+// requestedFormat is the --format of args, or else IEEE20305CTL_FORMAT, for
+// an error that ends the run before any command parses its flags.
+func requestedFormat(args []string) string {
+	for i, a := range args {
+		if a == "--" {
+			break
+		}
+		if v, ok := strings.CutPrefix(a, "--format="); ok {
+			return v
+		}
+		if a == "--format" && i+1 < len(args) {
+			return args[i+1]
+		}
+	}
+	if v := config.Getenv("IEEE20305CTL_FORMAT"); v != "" {
+		return v
+	}
+	return "text"
 }

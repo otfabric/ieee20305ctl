@@ -7,6 +7,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -119,7 +120,7 @@ exit code is 3.`,
 
 func validateFile(path string, decode func([]byte) (any, error), elementName func(any) (xml.Name, bool)) ValidationResult {
 	r := ValidationResult{File: path}
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		r.Error = err.Error()
 		return r

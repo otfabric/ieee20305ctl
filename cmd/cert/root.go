@@ -176,14 +176,15 @@ func generate(c generateConfig) ([]GeneratedFile, error) {
 			continue
 		}
 		for _, p := range []string{files[i].Cert, files[i].Key} {
-			if _, err := os.Stat(p); err == nil {
+			// Lstat: a symlink, dangling or not, is something there.
+			if _, err := os.Lstat(p); err == nil {
 				return nil, errs.InvalidInput(errs.CodeInvalidInput, p+" exists; use --force to overwrite", nil)
 			} else if !errors.Is(err, fs.ErrNotExist) {
 				return nil, errs.Output(errs.CodeOutputFileCreateFailed, err)
 			}
 		}
 	}
-	if err := os.MkdirAll(c.Out, 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Clean(c.Out), 0o750); err != nil {
 		return nil, errs.Output(errs.CodeOutputFileCreateFailed, err)
 	}
 	ca, caKey, err := security.TestCA(c.Org)
@@ -218,6 +219,30 @@ func generate(c generateConfig) ([]GeneratedFile, error) {
 	return files, nil
 }
 
+// replaceFile writes data to a new file of mode 0600 beside path and
+// renames it to path. The rename replaces what is at path, a symlink
+// included, instead of writing through it, and an existing file's mode is
+// not kept.
+func replaceFile(path string, data []byte) error {
+	path = filepath.Clean(path)
+	tmp, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".*")
+	if err != nil {
+		return err
+	}
+	name := tmp.Name()
+	_, err = tmp.Write(data)
+	if cerr := tmp.Close(); err == nil {
+		err = cerr
+	}
+	if err == nil {
+		err = os.Rename(name, path)
+	}
+	if err != nil {
+		_ = os.Remove(name)
+	}
+	return err
+}
+
 // testHMNType is the hardware module type of the test certificates: an
 // object identifier under the documentation arc.
 var testHMNType = asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 99999, 2030, 5}
@@ -227,14 +252,10 @@ func write(f *GeneratedFile, c *x509.Certificate, key *ecdsa.PrivateKey) error {
 	if err != nil {
 		return errs.Internal(err)
 	}
-	if err := os.WriteFile(f.Cert, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: c.Raw}), 0o644); err != nil {
+	if err := replaceFile(f.Cert, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: c.Raw})); err != nil {
 		return errs.Output(errs.CodeOutputFileWriteFailed, err)
 	}
-	if err := os.WriteFile(f.Key, pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der}), 0o600); err != nil {
-		return errs.Output(errs.CodeOutputFileWriteFailed, err)
-	}
-	// WriteFile keeps the mode of an existing file; a key must not stay readable.
-	if err := os.Chmod(f.Key, 0o600); err != nil {
+	if err := replaceFile(f.Key, pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der})); err != nil {
 		return errs.Output(errs.CodeOutputFileWriteFailed, err)
 	}
 	f.Identity = identity(c)
@@ -468,7 +489,7 @@ func load(path string) (*x509.Certificate, error) {
 }
 
 func loadChain(path string) ([]*x509.Certificate, error) {
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		return nil, errs.InvalidInput(errs.CodeInputFileOpenFailed, err.Error(), err)
 	}

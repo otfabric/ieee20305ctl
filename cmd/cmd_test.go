@@ -356,6 +356,13 @@ func TestFormats(t *testing.T) {
 	if r := run(t, "client", "flow-reservation", "--power", "100001"); r.code != 3 {
 		t.Errorf("a power that does not fit: %+v", r)
 	}
+	must(t, 0, "client", "flow-reservation", "--energy", "20000", "--power", "7000", "--duration", "4h", "--duration-requested", "1h")
+	// durationRequested is a UInt16 of seconds: 65536 s used to wrap to 0.
+	for _, d := range []string{"65536s", "-1s"} {
+		if r := run(t, "client", "flow-reservation", "--duration-requested", d); r.code != 3 {
+			t.Errorf("--duration-requested %s: %+v", d, r)
+		}
+	}
 }
 
 // A device of the seed that is not registered yet, then registered by the
@@ -489,5 +496,13 @@ func TestCCM8(t *testing.T) {
 	must(t, 0, "client", "respond", "/derp/1/derc/1", "--status", "received")
 	if r := must(t, 0, "client", "walk", "--depth", "3", "--format", "json"); !strings.Contains(r.stdout, `"/rsps/1/rsp"`) {
 		t.Errorf("walk: %s", r.stdout)
+	}
+}
+
+// The format of an error before the flags are parsed: flags after "--" are
+// arguments, not flags.
+func TestRequestedFormatStopsAtDashDash(t *testing.T) {
+	if got := requestedFormat([]string{"client", "--", "--format=json"}); got == "json" {
+		t.Errorf("requestedFormat after --: %q", got)
 	}
 }

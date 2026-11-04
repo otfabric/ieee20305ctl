@@ -356,7 +356,7 @@ func (d *DERs) MarshalTextOutput() (string, error) {
 			}
 			fmt.Fprintf(&b, "  %-16s %-28s %s\n", r.Name, r.Href, state)
 			if r.XML != "" {
-				for _, line := range strings.Split(strings.TrimSpace(r.XML), "\n") {
+				for line := range strings.SplitSeq(strings.TrimSpace(r.XML), "\n") {
 					fmt.Fprintf(&b, "    %s\n", line)
 				}
 			}

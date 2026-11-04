@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net"
 	"os"
 	"time"
@@ -45,7 +46,14 @@ type ReplyError struct {
 
 // ServeControl answers requests on the Unix socket at path until ctx ends.
 func (s *Site) ServeControl(ctx context.Context, path string) error {
-	_ = os.Remove(path)
+	// A socket left by a server that did not stop is replaced; anything
+	// else at path (a mistyped --control-socket) is the operator's.
+	if fi, err := os.Lstat(path); err == nil {
+		if fi.Mode()&fs.ModeSocket == 0 {
+			return fmt.Errorf("%s exists and is not a socket", path)
+		}
+		_ = os.Remove(path)
+	}
 	l, err := net.Listen("unix", path)
 	if err != nil {
 		return err

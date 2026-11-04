@@ -15,6 +15,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -156,8 +157,7 @@ func (c *startConfig) run(ctx context.Context, out *format.StreamWriter) (int, e
 		DeviceCAs: roots, CCM8: c.CCM8, NotifyLoopback: c.NotifyLoopback, LogRequests: c.LogRequests, Events: emit}, seed)
 	if err != nil {
 		_ = inner.Close()
-		var e *errs.Error
-		if errors.As(err, &e) {
+		if _, ok := errors.AsType[*errs.Error](err); ok {
 			return 0, err
 		}
 		return 0, errs.InvalidInput(errs.CodeInvalidConfig, "the seed: "+err.Error(), err)
@@ -225,7 +225,7 @@ func newGenerateConfigCmd() *cobra.Command {
 			if _, err := os.Stat(c.Output); err == nil && !c.Force {
 				return errs.InvalidInput(errs.CodeOutputFileCreateFailed, c.Output+" exists; use --force to overwrite", nil)
 			}
-			if err := os.WriteFile(c.Output, []byte(site.Example), 0o644); err != nil {
+			if err := os.WriteFile(filepath.Clean(c.Output), []byte(site.Example), 0o600); err != nil {
 				return errs.Output(errs.CodeOutputFileWriteFailed, err)
 			}
 			_, err := fmt.Fprintf(cmd.ErrOrStderr(), "wrote %s\n", c.Output)

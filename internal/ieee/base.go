@@ -211,7 +211,13 @@ func intOf(v reflect.Value) int64 {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return v.Int()
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return int64(v.Uint())
+		// No field of the schema is a UInt64 above math.MaxInt64; saturate
+		// rather than show it negative.
+		u := v.Uint()
+		if u > math.MaxInt64 {
+			return math.MaxInt64
+		}
+		return int64(u)
 	default:
 		return 0
 	}
@@ -262,7 +268,11 @@ func set(f reflect.Value, s string) error {
 		f.Set(e)
 		return nil
 	}
-	// A power: the smallest multiplier whose value fits.
+	// A power: the smallest multiplier whose value fits. An infinite value
+	// never would (and dividing it never ends).
+	if math.IsInf(x, 0) || math.IsNaN(x) {
+		return fmt.Errorf("%s does not fit a value with a power-of-ten multiplier", s)
+	}
 	m := int64(0)
 	for math.Abs(x) > 32767 {
 		x /= 10

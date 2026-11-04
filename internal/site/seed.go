@@ -8,9 +8,12 @@ package site
 import (
 	"bytes"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"io"
 	"math"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -150,7 +153,7 @@ func (d *Duration) parse(s string) error {
 
 // LoadSeed reads a seed file.
 func LoadSeed(file string) (*Seed, error) {
-	data, err := os.ReadFile(file)
+	data, err := os.ReadFile(filepath.Clean(file))
 	if err != nil {
 		return nil, err
 	}
@@ -167,6 +170,14 @@ func ParseSeed(data []byte) (*Seed, error) {
 	dec := yaml.NewDecoder(bytes.NewReader(data))
 	dec.KnownFields(true)
 	if err := dec.Decode(&s); err != nil {
+		return nil, err
+	}
+	// A second document would be dropped without a word.
+	var more yaml.Node
+	if err := dec.Decode(&more); !errors.Is(err, io.EOF) {
+		if err == nil {
+			err = errors.New("a seed is one YAML document; this file has more")
+		}
 		return nil, err
 	}
 	if err := s.Validate(); err != nil {
@@ -202,6 +213,15 @@ func (s *Seed) Validate() error {
 			}
 		}
 	}
+	for i, t := range s.Tariffs {
+		for j, rc := range t.RateComponents {
+			for k, iv := range rc.Intervals {
+				if iv.Duration <= 0 {
+					return fmt.Errorf("tariffs[%d].rate_components[%d].intervals[%d]: a positive duration is required", i, j, k)
+				}
+			}
+		}
+	}
 	return nil
 }
 
@@ -217,7 +237,7 @@ func mrid(s, name string) ([]byte, error) {
 	var b [16]byte
 	h := fnv(name)
 	for i := range b {
-		b[i] = byte(h >> (8 * (i % 8)))
+		b[i] = byte(h >> (8 * (i % 8)) & 0xff)
 		if i == 7 {
 			h = fnv(fmt.Sprint(h))
 		}

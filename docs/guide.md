@@ -244,7 +244,9 @@ interrupted; with `--format json` each record is a JSON line, ready for
 `jq`. It stops with exit 6 when the server's PIN is not `--pin`.
 
 With `--notify-listen` the agent serves a notification listener, subscribes
-to its programs, and polls less (`--subscribed-poll-rate`).
+to its programs, and polls less (`--subscribed-poll-rate`). The listener
+takes notifications only from peers with a certificate of the device's CAs;
+see `--notify-allow-anonymous` in [section 9](#9-subscriptions-and-notifications).
 
 ## 7. Operate the server: issue, cancel, set defaults
 
@@ -340,6 +342,12 @@ $ ieee20305ctl client subscribe /derp/1/derc --listen 127.0.0.1:18444 --count 1
 The notification arrived when the operator issued a control
 (`server issue-control … --yes`). The subscription is deleted when the
 command ends, unless `--keep`.
+
+The listener takes a notification only from a peer that presents a
+certificate the device's CAs issued, as the server's notifier does. Some
+servers post without a certificate (GridAPPS-D): `--listen-allow-anonymous`
+(`--notify-allow-anonymous` of `client run`) takes those too, and then
+anyone who reaches the listener can post notifications to the device.
 
 ## 10. A server that offers only CCM_8 (GridAPPS-D)
 

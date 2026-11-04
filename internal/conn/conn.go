@@ -17,7 +17,10 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	ieee20305 "github.com/otfabric/go-ieee20305"
@@ -58,6 +61,9 @@ type Device struct {
 	// HTTP is the HTTP client of the device's certificate, for a second
 	// client of the same device (another codec, say).
 	HTTP *http.Client
+	// Listed counts the list items a command has read through this device,
+	// for the bound of a command's lists as a whole (lists within lists).
+	Listed atomic.Int64
 }
 
 // Validate checks c without touching the network or the files.
@@ -100,11 +106,26 @@ func (c Config) edition() (ieee20305.Edition, error) {
 func ServerURL(s string) (string, error) {
 	s = strings.TrimSpace(s)
 	if !strings.Contains(s, "://") {
-		host := s
-		if _, _, err := net.SplitHostPort(host); err != nil {
-			host = net.JoinHostPort(host, "443")
+		bad := func(err error) (string, error) {
+			return "", errs.InvalidInput(errs.CodeInvalidURL, fmt.Sprintf("--url %q: an https URL, or host[:port]", s), err)
 		}
-		return "https://" + host + "/dcap", nil
+		host, port, err := net.SplitHostPort(s)
+		if err != nil {
+			host, port = s, "443"
+		}
+		if n, err := strconv.Atoi(port); err != nil || n < 1 || n > 65535 {
+			return bad(err)
+		}
+		// Only a host: no path, query, fragment, user or space, and an
+		// IPv6 address only in brackets.
+		if host == "" || strings.ContainsAny(host, "/?#@% []") {
+			return bad(nil)
+		}
+		u := &url.URL{Scheme: "https", Host: net.JoinHostPort(host, port), Path: "/dcap"}
+		if _, err := url.Parse(u.String()); err != nil {
+			return bad(err)
+		}
+		return u.String(), nil
 	}
 	u, err := url.Parse(s)
 	if err != nil || u.Scheme != "https" || u.Host == "" {
@@ -164,7 +185,7 @@ func LoadKeyPair(certFile, keyFile string) (tls.Certificate, error) {
 
 // LoadPool loads the CA certificates of a PEM file.
 func LoadPool(file string) (*x509.CertPool, error) {
-	data, err := os.ReadFile(file)
+	data, err := os.ReadFile(filepath.Clean(file))
 	if err != nil {
 		return nil, errs.InvalidInput(errs.CodeInputFileOpenFailed, fmt.Sprintf("the CA certificates %s: %v", file, err), err)
 	}
@@ -177,7 +198,7 @@ func LoadPool(file string) (*x509.CertPool, error) {
 
 // LoadCertificate loads the first certificate of a PEM file.
 func LoadCertificate(file string) (*x509.Certificate, error) {
-	data, err := os.ReadFile(file)
+	data, err := os.ReadFile(filepath.Clean(file))
 	if err != nil {
 		return nil, errs.InvalidInput(errs.CodeInputFileOpenFailed, fmt.Sprintf("the certificate %s: %v", file, err), err)
 	}

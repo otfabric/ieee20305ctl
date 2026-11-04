@@ -8,7 +8,6 @@ package server
 import (
 	"context"
 	"crypto/tls"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -157,9 +156,6 @@ func (c *startConfig) run(ctx context.Context, out *format.StreamWriter) (int, e
 		DeviceCAs: roots, CCM8: c.CCM8, NotifyLoopback: c.NotifyLoopback, LogRequests: c.LogRequests, Events: emit}, seed)
 	if err != nil {
 		_ = inner.Close()
-		if _, ok := errors.AsType[*errs.Error](err); ok {
-			return 0, err
-		}
 		return 0, errs.InvalidInput(errs.CodeInvalidConfig, "the seed: "+err.Error(), err)
 	}
 	defer func() { _ = s.Close() }()

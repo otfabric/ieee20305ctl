@@ -44,10 +44,9 @@ A SAST review (gosec, opengrep) and hostile-peer tests. Built on go-ieee20305 v0
 **Date:** 2026-10-31
 **Previous release:** v0.3.1
 
-### Fixed
+### Changed
 
-- A seed duration in seconds too large for `time.Duration` wrapped silently. It is now an error.
-- Built on go-ieee20305 v0.5.4.
+- Built on go-ieee20305 v0.5.4, whose client refuses links and redirects that carry userinfo or match the server's host only through Unicode case folding.
 
 ---
 

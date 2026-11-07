@@ -33,6 +33,8 @@ From source (Go 1.26.8+): `go install github.com/otfabric/ieee20305ctl@latest`
 
 ### Shell completion
 
+Commands, flags, the values of the flags with a fixed set of them (`--format`, `--profile`, `--edition`, `--role`, `--usage`, `--status`) and the files of the flags that take one complete.
+
 ```bash
 # bash (needs the bash-completion package)
 mkdir -p ~/.local/share/bash-completion/completions
@@ -208,7 +210,7 @@ and DER status, subscriptions, a CCM_8 server (GridAPPS-D), CSIP-AUS
 | `server provision`, `register` | Add and register devices |
 | `cert generate`, `inspect`, `lfdi`, `verify` | Certificates |
 | `validate <file>…` | Check XML documents against the schema |
-| `completion`, `version` | Shell completion; the version |
+| `completion`, `version` | Shell completion (bash, zsh, fish, PowerShell); the version, on one line or as JSON (`--json`) |
 
 Every flag of every command: [docs/commands.md](docs/commands.md).
 

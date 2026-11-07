@@ -46,8 +46,13 @@ func TestVersionPrintsTheBuiltVersion(t *testing.T) {
 	if want == "" {
 		t.Fatal("IEEE20305CTL_E2E_VERSION is not set; run make e2e")
 	}
-	if !strings.Contains(output, "ieee20305ctl") || !strings.Contains(output, want) {
-		t.Fatalf("output does not name ieee20305ctl %s:\n%s", want, output)
+	want = strings.TrimPrefix(want, "v")
+	if !strings.HasPrefix(output, "ieee20305ctl "+want+" (") || strings.Count(output, "\n") != 1 {
+		t.Fatalf("output is not the line of ieee20305ctl %s:\n%s", want, output)
+	}
+	output, code = run(t, "version", "--json")
+	if code != 0 || !strings.HasPrefix(output, `{"name":"ieee20305ctl","version":"`+want+`","tag":`) {
+		t.Fatalf("version --json: exit %d\n%s", code, output)
 	}
 }
 

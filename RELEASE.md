@@ -4,6 +4,27 @@ Releases are cut with the `Release` workflow (semantic versioning, annotated
 tag, GitHub release with binaries for every platform). The section of the
 version below, up to the `---` that ends it, is the release's notes.
 
+## v0.5.0
+
+**Date:** 2026-11-07
+**Previous release:** v0.4.0
+
+### Summary
+
+`version` prints one line, as every OT Fabric CLI does, or JSON with `--json`; shell completion covers PowerShell and completes the values of every flag that has a fixed set of them, and files by type.
+
+### Added
+
+- `version --json` (and `version` with `IEEE20305CTL_FORMAT=json`): one object `{"name","version","tag","commit","built","libraries","go","platform"}`, every key present; `libraries` lists the OT Fabric libraries of the build (`go-ieee20305`, `go-ieee20305/tlsccm`) with their versions.
+- Completion of the values of `--profile`, `--edition`, `--role` (`server provision`), `--usage` (`cert verify`) and `--status` (`client respond`), next to `--format`. The flags that take a certificate, key, seed or XML document complete files of that type (`--cert`, `--key`, `--ca`, `--listen-cert`, `--listen-key`, `--config`, `--output`, `--file`, `--capability`, `--settings`, `--status` of `client der put`, `--availability`), as do the arguments of `validate` and `cert inspect|lfdi|verify`; `cert generate --out` completes directories. Addresses, numbers and hrefs no longer complete file names.
+
+### Changed
+
+- `version` prints one line: `ieee20305ctl 0.5.0 (tag v0.5.0, commit <sha>, built <date>, go-ieee20305 0.6.0, go-ieee20305/tlsccm 0.3.0, go1.26.10, linux/amd64)`, instead of one line per field. The version has no leading `v`; a build without a tag leaves out the tag; a development build (also a pseudo-version) is `dev`, with the commit Go embeds (`-dirty` when modified). Scripts that read the old `ieee20305ctl version: …` line need `version --json`.
+- `make build` and `make e2e` inject the full commit SHA, and a version and tag only when HEAD is exactly on a tag (otherwise the binary reports `dev`).
+
+---
+
 ## v0.4.0
 
 **Date:** 2026-11-05

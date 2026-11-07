@@ -9,7 +9,6 @@ import (
 	"io"
 	"os"
 	"os/signal"
-	"runtime"
 	"slices"
 	"strings"
 	"syscall"
@@ -19,23 +18,16 @@ import (
 	"github.com/otfabric/ieee20305ctl/cmd/cert"
 	"github.com/otfabric/ieee20305ctl/cmd/client"
 	"github.com/otfabric/ieee20305ctl/cmd/server"
+	"github.com/otfabric/ieee20305ctl/internal/buildinfo"
 	"github.com/otfabric/ieee20305ctl/internal/config"
 	"github.com/otfabric/ieee20305ctl/internal/errs"
 	"github.com/otfabric/ieee20305ctl/internal/format"
 	"github.com/otfabric/ieee20305ctl/internal/runner"
 )
 
-// buildMeta holds link-time metadata set from main via SetBuildMeta.
-var buildMeta struct {
-	version, tag, commit, buildDate string
-}
-
 // SetBuildMeta is called from main before Execute; values come from ldflags -X main.*.
 func SetBuildMeta(version, tag, commit, buildDate string) {
-	buildMeta.version = version
-	buildMeta.tag = tag
-	buildMeta.commit = commit
-	buildMeta.buildDate = buildDate
+	buildinfo.Set(version, tag, commit, buildDate)
 }
 
 // NewRootCmd builds the command tree. Every call returns a fresh tree, with the flags of
@@ -69,64 +61,29 @@ stderr. Exit codes are stable: see docs/exitcodes.md.`,
 		newCompletionCmd(),
 		newVersionCmd(),
 	)
+	registerCompletions(root)
 	return root
 }
 
 func newVersionCmd() *cobra.Command {
-	return &cobra.Command{
+	var asJSON bool
+	cmd := &cobra.Command{
 		Use:   "version",
 		Short: "Print the version of ieee20305ctl",
-		Args:  cobra.NoArgs,
+		Long: `Print the version of ieee20305ctl on one line: version, tag, commit, build date, Go
+version and platform. --json (or IEEE20305CTL_FORMAT=json) prints it as one JSON object.`,
+		Args: cobra.NoArgs,
 		Run: func(cmd *cobra.Command, _ []string) {
-			out := cmd.OutOrStdout()
-			ver := strings.TrimSpace(buildMeta.version)
-			if ver == "" {
-				ver = "(unknown)"
+			info := buildinfo.Get("ieee20305ctl")
+			line := info.String()
+			if asJSON || strings.EqualFold(strings.TrimSpace(config.Getenv("IEEE20305CTL_FORMAT")), "json") {
+				line = info.JSON()
 			}
-			_, _ = fmt.Fprintf(out, "ieee20305ctl version: %s\n", ver)
-			if s := strings.TrimSpace(buildMeta.tag); s != "" {
-				_, _ = fmt.Fprintf(out, "tag:         %s\n", s)
-			}
-			if s := strings.TrimSpace(buildMeta.commit); s != "" {
-				_, _ = fmt.Fprintf(out, "commit:      %s\n", s)
-			}
-			if s := strings.TrimSpace(buildMeta.buildDate); s != "" {
-				_, _ = fmt.Fprintf(out, "build date:  %s\n", s)
-			}
-			_, _ = fmt.Fprintf(out, "go version:  %s\n", runtime.Version())
-			_, _ = fmt.Fprintf(out, "platform:    %s/%s\n", runtime.GOOS, runtime.GOARCH)
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), line)
 		},
 	}
-}
-
-func newCompletionCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:   "completion [bash|zsh|fish|powershell]",
-		Short: "Generate shell completion scripts",
-		Long: `Generate shell completion scripts for ieee20305ctl.
-
-To load completions:
-
-  bash:       source <(ieee20305ctl completion bash)
-  zsh:        ieee20305ctl completion zsh > "${fpath[1]}/_ieee20305ctl"
-  fish:       ieee20305ctl completion fish | source
-  powershell: ieee20305ctl completion powershell | Out-String | Invoke-Expression`,
-		Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
-		ValidArgs: []string{"bash", "zsh", "fish", "powershell"},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			out := cmd.OutOrStdout()
-			switch args[0] {
-			case "bash":
-				return cmd.Root().GenBashCompletionV2(out, true)
-			case "zsh":
-				return cmd.Root().GenZshCompletion(out)
-			case "fish":
-				return cmd.Root().GenFishCompletion(out, true)
-			default:
-				return cmd.Root().GenPowerShellCompletionWithDesc(out)
-			}
-		},
-	}
+	cmd.Flags().BoolVar(&asJSON, "json", false, "Print the version as one JSON object")
+	return cmd
 }
 
 // Execute runs the root command and returns the process exit code (main should call os.Exit).

@@ -15,6 +15,7 @@ to a name or shape is called out in the release notes.
 | Durations | `duration_s`, `poll_rate_s`: integers, seconds |
 | Controls | `settings`: an array of `{"name", "value", "text"}`, one per control of a DERControlBase that is set; see below |
 | Lists | `links`, `programs`, `controls`, `tariffs`, `devices`, `documents`: **arrays**, empty rather than null |
+| Version | `version --json`: one object `{"name", "version", "tag", "commit", "built", "libraries", "go", "platform"}`, every key always present; `libraries` is an array of `{"name", "version"}` (`go-ieee20305`, `0.6.0`); see [commands.md](commands.md#version) |
 | Fatal error | one object `{"error": {"kind", "code", "message"}, "ieee20305": {…}}` on stdout, nothing else; see [exitcodes.md](exitcodes.md) |
 
 Fields that do not apply are omitted, not null.

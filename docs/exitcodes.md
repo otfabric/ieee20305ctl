@@ -12,6 +12,7 @@ Every command of ieee20305ctl exits with one of these codes. They are a
 | 5 | `timeout` | No answer in `--timeout` |
 | 6 | `refused` | The server answered with an HTTP error (4xx or 5xx); the `ieee20305` object has the status |
 | 6 | `protocol` | The server broke the protocol, or its answer cannot be trusted: a document that does not decode, a Registration whose PIN is not the device's, a device the server has not registered |
+| 7 | | Partial success. Reserved with its organisation meaning (`ExitPartial`): no command of ieee20305ctl exits 7 today |
 | 10 | `output`, `internal` | The result could not be written, or ieee20305ctl failed |
 | 130 | `interrupted` | Ctrl-C or SIGTERM before a one-shot command has its result |
 
@@ -97,6 +98,6 @@ the server may have applied it. Read the resource back before you resend.
 The operator commands that change what devices receive (`server
 issue-control`, `cancel`, `set-default`) and `client delete` need `--yes`.
 
-**Organisation table:** these codes follow the OT Fabric CLI exit-code table. ieee20305ctl does not use `1`, `7`, `8` and `9`: they keep their organisation meaning and are not reused for anything else.
+**Organisation table:** these codes follow the OT Fabric CLI exit-code table. ieee20305ctl does not exit `1`, `7`, `8` or `9`: they keep their organisation meaning (1 findings, 7 partial, 8 unsupported, 9 permission) and are not reused for anything else.
 
 **Format variable:** `IEEE20305CTL_FORMAT` is the name to use; `IEEE20305CTL_OUTPUT_FORMAT` stays accepted. When both are set, `IEEE20305CTL_FORMAT` wins.

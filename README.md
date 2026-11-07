@@ -14,7 +14,7 @@ It is built on [go-ieee20305](https://github.com/otfabric/go-ieee20305), and
 is one static binary with no runtime dependencies.
 
 **Docs:** [guide](docs/guide.md) (common scenarios, with real output) ·
-[exit codes](docs/exitcodes.md) · [JSON output](docs/json-output.md) ·
+[commands and flags](docs/commands.md) · [exit codes](docs/exitcodes.md) · [JSON output](docs/json-output.md) ·
 [server configuration](docs/server-config.md) · [RELEASE.md](RELEASE.md)
 
 ## Why ieee20305ctl?
@@ -252,6 +252,8 @@ and DER status, subscriptions, a CCM_8 server (GridAPPS-D), CSIP-AUS
 | `validate <file>…` | Check XML documents against the schema |
 | `completion`, `version` | Shell completion; the version |
 
+Every flag of every command: [docs/commands.md](docs/commands.md).
+
 ## Environment variables
 
 Every flag of the connection can come from the environment, so that a shell
@@ -330,7 +332,7 @@ ieee20305ctl/
 │   ├── format/           text, table, JSON and streams
 │   ├── runner/           running a command, and rendering a fatal error
 │   └── config/           flags and environment variables from struct tags
-└── docs/                 guide, exit codes, JSON output, server configuration
+└── docs/                 guide, command reference, exit codes, JSON output, server configuration
 ```
 
 ## Development

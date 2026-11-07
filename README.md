@@ -17,6 +17,20 @@ is one static binary with no runtime dependencies.
 [commands and flags](docs/commands.md) · [exit codes](docs/exitcodes.md) · [JSON output](docs/json-output.md) ·
 [server configuration](docs/server-config.md) · [RELEASE.md](RELEASE.md)
 
+## Install
+
+```bash
+curl -fsSL https://get.otfabric.io/ieee20305ctl | sh
+```
+
+```powershell
+irm https://get.otfabric.io/ieee20305ctl.ps1 | iex
+```
+
+Linux (amd64, arm64, armv7), macOS (Intel, Apple silicon) and Windows (amd64, arm64). The installer verifies the release's SHA-256 checksum, installs per user without `sudo` (`~/.local/bin`, Windows `%LOCALAPPDATA%\OTFabric\bin`), and upgrades in place when run again. Pin a version with `OTF_VERSION=x.y.z`; for CI, containers and device images use `OTF_UNMANAGED_INSTALL=<dir>`; all options: [otfabric/install](https://github.com/otfabric/install#options). For offline machines, the archives and checksums are on [Releases](https://github.com/otfabric/ieee20305ctl/releases).
+
+From source (Go 1.26.8+): `go install github.com/otfabric/ieee20305ctl@latest`
+
 ## Why ieee20305ctl?
 
 - **Talk to a utility server as a device** from a shell: read its
@@ -74,8 +88,8 @@ The [guide](docs/guide.md) walks through every scenario with its output.
 
 ## Table of Contents
 
+- [Install](#install)
 - [Features](#features)
-- [Installation](#installation)
 - [IEEE 2030.5 in two minutes](#ieee-20305-in-two-minutes)
 - [Usage](#usage)
 - [Commands](#commands)
@@ -102,82 +116,6 @@ The [guide](docs/guide.md) walks through every scenario with its output.
 | **Certificates** | A test PKI with optional HardwareModuleNames (`cert generate`), LFDI and SFDI (`cert lfdi`), the whole certificate (`cert inspect`), chain verification as an IEEE 2030.5 peer does it (`cert verify`) |
 | **Documents** | Validation against IEEE 2030.5-2023 or CSIP-AUS v1.3 (`validate`) |
 | **Profiles and transport** | IEEE 2030.5-2018 and 2023 (`--edition`), CSIP-AUS (`--profile csipaus`), CCM_8 (`--ccm8`), mutual TLS throughout |
-
-## Installation
-
-Download a pre-built binary from the [GitHub Releases page](https://github.com/otfabric/ieee20305ctl/releases). No Go toolchain is required.
-
-| Platform | CPU | Download |
-|---|---|---|
-| Linux | x86-64 | `ieee20305ctl-<version>-linux-amd64.tar.gz` |
-| Linux | 64-bit ARM | `ieee20305ctl-<version>-linux-arm64.tar.gz` |
-| Linux | 32-bit ARM | `ieee20305ctl-<version>-linux-armv7.tar.gz` |
-| macOS | Apple Silicon | `ieee20305ctl-<version>-darwin-arm64.tar.gz` |
-| macOS | Intel | `ieee20305ctl-<version>-darwin-amd64.tar.gz` |
-| Windows | x86-64 | `ieee20305ctl-<version>-windows-amd64.zip` |
-| Windows | ARM64 | `ieee20305ctl-<version>-windows-arm64.zip` |
-
-Each release has `ieee20305ctl-<version>-checksums.txt` (SHA-256).
-
-### Linux
-
-```bash
-VERSION=$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/otfabric/ieee20305ctl/releases/latest | sed 's|.*/v||')
-case "$(uname -m)" in
-  x86_64)         ARCH=amd64 ;;
-  aarch64|arm64)  ARCH=arm64 ;;
-  armv7l)         ARCH=armv7 ;;
-esac
-FILE="ieee20305ctl-${VERSION}-linux-${ARCH}.tar.gz"
-BASE="https://github.com/otfabric/ieee20305ctl/releases/download/v${VERSION}"
-curl -fsSLO "${BASE}/${FILE}" && curl -fsSLO "${BASE}/ieee20305ctl-${VERSION}-checksums.txt"
-grep "${FILE}" "ieee20305ctl-${VERSION}-checksums.txt" | sha256sum -c -
-mkdir -p ieee20305ctl-dl && tar -xzf "${FILE}" -C ieee20305ctl-dl
-sudo install -m 0755 "$(find ieee20305ctl-dl -type f -name 'ieee20305ctl*' | head -n1)" /usr/local/bin/ieee20305ctl
-```
-
-### macOS
-
-```bash
-VERSION=$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/otfabric/ieee20305ctl/releases/latest | sed 's|.*/v||')
-case "$(uname -m)" in arm64) ARCH=arm64 ;; x86_64) ARCH=amd64 ;; esac
-FILE="ieee20305ctl-${VERSION}-darwin-${ARCH}.tar.gz"
-BASE="https://github.com/otfabric/ieee20305ctl/releases/download/v${VERSION}"
-curl -fsSLO "${BASE}/${FILE}" && curl -fsSLO "${BASE}/ieee20305ctl-${VERSION}-checksums.txt"
-grep "${FILE}" "ieee20305ctl-${VERSION}-checksums.txt" | shasum -a 256 -c -
-mkdir -p ieee20305ctl-dl && tar -xzf "${FILE}" -C ieee20305ctl-dl
-sudo install -m 0755 "$(find ieee20305ctl-dl -type f -name 'ieee20305ctl*' | head -n1)" /usr/local/bin/ieee20305ctl
-```
-
-### Windows (PowerShell)
-
-```powershell
-$version = (Invoke-RestMethod https://api.github.com/repos/otfabric/ieee20305ctl/releases/latest).tag_name.TrimStart('v')
-$arch    = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'amd64' }
-$file = "ieee20305ctl-$version-windows-$arch.zip"
-$base = "https://github.com/otfabric/ieee20305ctl/releases/download/v$version"
-Invoke-WebRequest "$base/$file" -OutFile "$env:TEMP\$file"
-Invoke-WebRequest "$base/ieee20305ctl-$version-checksums.txt" -OutFile "$env:TEMP\ieee20305ctl-checksums.txt"
-$expected = ((Select-String -Path "$env:TEMP\ieee20305ctl-checksums.txt" -Pattern $file).Line -split '\s+')[0]
-if ($expected -ne (Get-FileHash "$env:TEMP\$file" -Algorithm SHA256).Hash) { throw "Checksum mismatch for $file" }
-$dir = "$env:LOCALAPPDATA\Programs\ieee20305ctl"
-New-Item -ItemType Directory -Force -Path $dir | Out-Null
-Expand-Archive "$env:TEMP\$file" -DestinationPath "$env:TEMP\ieee20305ctl-dl" -Force
-$exe = Get-ChildItem "$env:TEMP\ieee20305ctl-dl" -Recurse -Filter 'ieee20305ctl*.exe' | Select-Object -First 1
-Copy-Item $exe.FullName "$dir\ieee20305ctl.exe" -Force
-```
-
-### Build from source
-
-Go 1.26.8 or later (the CCM_8 module needs it):
-
-```bash
-go install github.com/otfabric/ieee20305ctl@latest
-```
-
-or `git clone`, then `make build` (writes `bin/ieee20305ctl`).
-
-Check that it works: `ieee20305ctl version`.
 
 ## IEEE 2030.5 in two minutes
 

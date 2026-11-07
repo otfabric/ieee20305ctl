@@ -31,6 +31,26 @@ Linux (amd64, arm64, armv7), macOS (Intel, Apple silicon) and Windows (amd64, ar
 
 From source (Go 1.26.8+): `go install github.com/otfabric/ieee20305ctl@latest`
 
+### Shell completion
+
+```bash
+# bash (needs the bash-completion package)
+mkdir -p ~/.local/share/bash-completion/completions
+ieee20305ctl completion bash > ~/.local/share/bash-completion/completions/ieee20305ctl
+
+# zsh: a directory on your fpath, then restart the shell
+mkdir -p ~/.zsh/completions && ieee20305ctl completion zsh > ~/.zsh/completions/_ieee20305ctl
+# and once in ~/.zshrc:  fpath=(~/.zsh/completions $fpath); autoload -U compinit && compinit
+
+# fish
+mkdir -p ~/.config/fish/completions && ieee20305ctl completion fish > ~/.config/fish/completions/ieee20305ctl.fish
+```
+
+```powershell
+# PowerShell: add this line to your profile ($PROFILE)
+ieee20305ctl completion powershell | Out-String | Invoke-Expression
+```
+
 ## Why ieee20305ctl?
 
 - **Talk to a utility server as a device** from a shell: read its

@@ -12,5 +12,5 @@ We will acknowledge receipt within 48 hours and aim to provide a fix within
 
 | Version | Supported |
 |---------|-----------|
-| v0.4.x (latest release) | Yes |
+| Latest release | Yes |
 | Older releases | No |

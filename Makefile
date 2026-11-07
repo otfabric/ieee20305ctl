@@ -11,7 +11,8 @@ APP_NAME = ieee20305ctl
 
 ARCHS = linux/amd64 linux/arm64 linux/arm/v7 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64
 
-VERSION    := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+# VERSION and TAG only when HEAD is exactly on a tag; otherwise the binary reports dev.
+VERSION    := $(shell git describe --tags --exact-match 2>/dev/null)
 TAG        := $(shell git describe --tags --exact-match 2>/dev/null)
 COMMIT     := $(shell git rev-parse HEAD 2>/dev/null)
 BUILD_DATE := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")

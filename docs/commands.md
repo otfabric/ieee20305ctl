@@ -643,11 +643,12 @@ ieee20305ctl version [flags]
 One line on stdout; `--json`, or `IEEE20305CTL_FORMAT=json`, prints it as JSON:
 
 ```text
-ieee20305ctl 0.5.0 (tag v0.5.0, commit 1802d0f9afe8642d1e278120b76fcdfac967cb9e, built 2026-11-05T15:41:49Z, go1.26.10, linux/amd64)
-{"name":"ieee20305ctl","version":"0.5.0","tag":"v0.5.0","commit":"1802d0f9afe8642d1e278120b76fcdfac967cb9e","built":"2026-11-05T15:41:49Z","go":"go1.26.10","platform":"linux/amd64"}
+ieee20305ctl 0.5.0 (tag v0.5.0, commit 1802d0f9afe8642d1e278120b76fcdfac967cb9e, built 2026-11-05T15:41:49Z, go-ieee20305 0.6.0, go-ieee20305/tlsccm 0.3.0, go1.26.10, linux/amd64)
+{"name":"ieee20305ctl","version":"0.5.0","tag":"v0.5.0","commit":"1802d0f9afe8642d1e278120b76fcdfac967cb9e","built":"2026-11-05T15:41:49Z","libraries":[{"name":"go-ieee20305","version":"0.6.0"},{"name":"go-ieee20305/tlsccm","version":"0.3.0"}],"go":"go1.26.10","platform":"linux/amd64"}
 ```
 
-A build without a tag leaves out `tag …, ` (and has `"tag": ""`); a development build
-(`go build`, `go run`) is version `dev`, with the commit Go embeds (`-dirty` for a modified
-tree) and build date `unknown`.
+The OT Fabric libraries the binary is built with follow the build date. A build without a
+tag leaves out `tag …, ` (and has `"tag": ""`); a development build (`go build`, `go run`,
+`make build` off a tag) is version `dev`, with the commit Go embeds (`-dirty` for a
+modified tree) and build date `unknown`.
 

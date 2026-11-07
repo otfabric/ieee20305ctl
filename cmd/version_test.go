@@ -15,10 +15,20 @@ const testSHA = "1802d0f9afe8642d1e278120b76fcdfac967cb9e"
 func TestVersionOutput(t *testing.T) {
 	t.Cleanup(func() { buildinfo.Set("", "", "", "") })
 	SetBuildMeta("0.5.0", "v0.5.0", testSHA, "2026-11-05T15:41:49Z")
+	libs := buildinfo.Get("ieee20305ctl").Libraries
+	libText, libJSON := "", []string{}
+	for _, l := range libs {
+		libText += l.Name + " " + l.Version + ", "
+		libJSON = append(libJSON, `{"name":"`+l.Name+`","version":"`+l.Version+`"}`)
+	}
+	if !strings.Contains(libText, "go-ieee20305 ") {
+		t.Errorf("the libraries lack go-ieee20305: %q", libText)
+	}
 	tail := runtime.Version() + ", " + runtime.GOOS + "/" + runtime.GOARCH
-	text := "ieee20305ctl 0.5.0 (tag v0.5.0, commit " + testSHA + ", built 2026-11-05T15:41:49Z, " + tail + ")\n"
+	text := "ieee20305ctl 0.5.0 (tag v0.5.0, commit " + testSHA + ", built 2026-11-05T15:41:49Z, " + libText + tail + ")\n"
 	json := `{"name":"ieee20305ctl","version":"0.5.0","tag":"v0.5.0","commit":"` + testSHA +
-		`","built":"2026-11-05T15:41:49Z","go":"` + runtime.Version() + `","platform":"` + runtime.GOOS + "/" + runtime.GOARCH + "\"}\n"
+		`","built":"2026-11-05T15:41:49Z","libraries":[` + strings.Join(libJSON, ",") + `],"go":"` + runtime.Version() +
+		`","platform":"` + runtime.GOOS + "/" + runtime.GOARCH + "\"}\n"
 	if r := must(t, 0, "version"); r.stdout != text {
 		t.Errorf("version:\n got %q\nwant %q", r.stdout, text)
 	}

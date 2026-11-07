@@ -1,0 +1,9 @@
+{
+  "clis": [
+    {
+      "name": "ieee20305ctl",
+      "manifest": "./cmd",
+      "exit_codes": "internal/errs"
+    }
+  ]
+}

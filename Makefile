@@ -27,6 +27,8 @@ COVERAGE_MIN ?= 85
 # Per-package floor (TEST-012), over the same coverage.out.
 COVER_PKG_MIN := 80
 FUZZTIME ?= 30s
+# docsync release of docs-check (DOC-008).
+DOCSYNC_VERSION := v0.2.0
 
 .PHONY: help
 help: ## Show this help.
@@ -37,7 +39,7 @@ run: ## Run the application.
 	go run -ldflags "$(LDFLAGS)" .
 
 .PHONY: check
-check: fmt-check vet lint vuln test coverage coverage-pkg-check ## Run all checks (format, vet, lint, test, coverage)
+check: fmt-check vet lint vuln test coverage coverage-pkg-check docs-check ## Run all checks (format, vet, lint, test, coverage)
 
 .PHONY: test
 test: ## Run tests.
@@ -132,6 +134,11 @@ e2e: ## Build the binary and run the e2e suite against it
 	@mkdir -p bin
 	@go build -ldflags "$(LDFLAGS)" -o bin/ieee20305ctl .
 	@IEEE20305CTL_E2E_BIN=$(CURDIR)/bin/ieee20305ctl IEEE20305CTL_E2E_VERSION=$(VERSION) go test -count=1 -tags=e2e ./e2e/...
+
+# The documents against the code (DOC-008): docsync, as docs-check.yml runs it.
+.PHONY: docs-check
+docs-check: ## Check that the documents agree with the code (docsync)
+	@go run github.com/otfabric/docsync@$(DOCSYNC_VERSION) check .
 
 .PHONY: install
 install: ## Install the binary to GOPATH/bin.

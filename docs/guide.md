@@ -489,7 +489,7 @@ $ ieee20305ctl client run --pin 111115 --format json | jq -c 'select(.event=="de
 |---------|------|---------------|
 | `error: --url is required` | 3 | Give `--url` or `IEEE20305CTL_URL`, and `--cert`, `--key`, `--ca` |
 | `connect: connection refused` | 4 | Nothing listens at `--url`: check the host and port |
-| `the TLS handshake failed … try --ccm8` | 4 | The server offers only CCM_8 (GridAPPS-D, EPRI): add `--ccm8`. Or the server does not accept the device's certificate: is its CA the server's? |
+| `the TLS handshake failed … try --ccm8` | 4 | The server offers only CCM_8 (GridAPPS-D): add `--ccm8`. Or the server does not accept the device's certificate: is its CA the server's? |
 | `x509: certificate signed by unknown authority` | 4 | `--ca` does not hold the CA of the server's certificate |
 | `POST /edev: the server answered 403 Forbidden` | 6 | The server was not told of this device: provision it (`server provision`), or start the server with `--in-band` |
 | `has PIN 111115, not 999999` | 6 | The server is not the one the device was given, or `--pin` is wrong |

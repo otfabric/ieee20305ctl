@@ -4,6 +4,23 @@ Releases are cut with the `Release` workflow (semantic versioning, annotated
 tag, GitHub release with binaries for every platform). The section of the
 version below, up to the `---` that ends it, is the release's notes.
 
+## v0.6.0
+
+**Date:** 2026-11-15
+**Previous release:** v0.5.2
+
+Moves to go-ieee20305 v0.7.0 (was v0.6.0). No command or flag is added or changed; the library's new bounds apply with their defaults.
+
+### Changed
+
+- Built on go-ieee20305 v0.7.0 (go-ieee20305 RELEASE.md, v0.7.0). For the tool this means:
+  - `client run` keeps at most 1,000 events of one function set; the rest of a longer list is left out, logged at warning level and counted. A week of 5-minute controls is 2,016 events.
+  - The events of one poll are resolved together, so the outcome no longer depends on the order of the server's list.
+  - `server start`: one device may own at most 100,000 resources (its EndDevice with its lists, DERs, mirrors with their readings, responses, subscriptions, flow reservations); a request that would create more is answered 403.
+  - Code the library calls that does not return normally is logged with its stack and handled as an error, instead of ending the command.
+
+---
+
 ## v0.5.2
 
 **Date:** 2026-11-14

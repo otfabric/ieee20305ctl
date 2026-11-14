@@ -4,6 +4,23 @@ Releases are cut with the `Release` workflow (semantic versioning, annotated
 tag, GitHub release with binaries for every platform). The section of the
 version below, up to the `---` that ends it, is the release's notes.
 
+## v0.5.2
+
+**Date:** 2026-11-14
+**Previous release:** v0.5.1
+
+No change to commands or output.
+
+### Security
+
+- Built with Go 1.26.11 (v0.5.1 was built with 1.26.10). Go 1.26.11 fixes GO-2026-6859 in `net/http`, a crash of an HTTP/1 server through a race in the `MaxBytesReader` handling of request headers. govulncheck reports it as reachable from ieee20305ctl on 1.26.10, and not on 1.26.11.
+
+### Changed
+
+- CI: otfabric/engineering policy 1.6, the shared workflows v3.8.0, and one pull request workflow with a single required check.
+
+---
+
 ## v0.5.1
 
 **Date:** 2026-11-08

@@ -21,6 +21,7 @@ ieee20305ctl server start --cert server.pem --key server.key --ca ca.pem \
 | `--edition` | `2023` | The edition of devices the seed does not give one |
 | `--ccm8` | off | Serve TLS_ECDHE_ECDSA_WITH_AES_128_CCM_8 first, then AES-128-GCM: what GridAPPS-D and EPRI clients need |
 | `--in-band` | off | Let unknown devices post their EndDevice; they are registered with `server register` |
+| `--assigned-devices-only` | off | An aggregator registers only the devices of the seed whose `managed_by` is its LFDI; without it, it may also register devices the seed does not name, which it then manages |
 | `--control-socket` | | The Unix socket of the operator commands |
 | `--notify-loopback` | off | Deliver notifications to loopback and link-local URIs, which the server refuses by default |
 | `--advertise` | off | Advertise the server with DNS-SD (`_smartenergy._tcp`) |
@@ -97,7 +98,7 @@ tariffs:
 | `pin` | The PIN of its Registration, given to the device out of band |
 | `edition` | `2023` (default) or `2018`; CSIP-AUS is always 2018 |
 | `role` | `device` (default), `aggregator` (acts for the devices it manages) or `operator` (acts for every device; has no EndDevice) |
-| `managed_by` | The LFDI of the aggregator that manages the device |
+| `managed_by` | The LFDI of the aggregator that manages the device; an aggregator cannot register a device of the seed that names another (or none) |
 | `unregistered` | Create the EndDevice but no Registration: the device waits until `server register` |
 | `device_category` | The deviceCategory of its EndDevice, in hex (`00020000`) |
 

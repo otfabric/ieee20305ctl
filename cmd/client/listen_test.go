@@ -7,6 +7,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/tls"
 	"crypto/x509"
+	"math"
 	"net/http"
 	"strings"
 	"testing"
@@ -66,7 +67,7 @@ func TestListenPeerCertificates(t *testing.T) {
 	ok := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusCreated) })
 
 	for _, anonymous := range []bool{false, true} {
-		url, stop, err := listen(context.Background(), "127.0.0.1:0", d.Cert, d, anonymous, ok)
+		url, stop, err := listen(context.Background(), "127.0.0.1:0", d.Cert, d, anonymous, 0, ok)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -96,6 +97,15 @@ func TestScale(t *testing.T) {
 		v, m, err := scale16(c.in)
 		if err != nil || int64(v) != c.v || int8(m) != c.mult {
 			t.Errorf("scale16(%d) = %d e%d, %v; want %d e%d", c.in, v, m, err, c.v, c.mult)
+		}
+	}
+	// The multiplier stays within -9..9: a power that needs more is refused.
+	if v, m, err := scale16(32767_000_000_000); err != nil || v != 32767 || m != 9 {
+		t.Errorf("scale16(32767e9) = %d e%d, %v; want 32767 e9", v, m, err)
+	}
+	for _, in := range []int64{327_670_000_000_000, -327_680_000_000_000, 1_000_000_000_000_000_000, math.MinInt64} {
+		if v, m, err := scale16(in); err == nil {
+			t.Errorf("scale16(%d) = %d e%d, want an error", in, v, m)
 		}
 	}
 	if v, m := scale48(1 << 50); int64(v) > 1<<46 || m < 1 {

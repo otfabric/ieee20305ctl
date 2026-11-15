@@ -33,12 +33,13 @@ type runConfig struct {
 	Listen     string        `flag:"notify-listen" desc:"Serve a notification listener on this address and subscribe to the device's programs (needs --notify-url when the address is not reachable as is)"`
 	NotifyURL  string        `flag:"notify-url" desc:"URL the server posts notifications to"`
 	Anonymous  bool          `flag:"notify-allow-anonymous" desc:"Also take notifications from a peer that presents no certificate, as some servers (GridAPPS-D) post them; anyone who reaches the listener can then post notifications"`
+	MaxConns   int           `flag:"notify-max-connections" desc:"Most connections to the notification listener open at once, TLS handshakes included; more wait until one closes (0: no limit)"`
 	Subscribed time.Duration `flag:"subscribed-poll-rate" desc:"Poll rate while subscribed"`
 	Polls      bool          `flag:"polls" desc:"Write a record for each poll too, not only for failed ones"`
 }
 
 func newRunCmd() *cobra.Command {
-	c := runConfig{Common: newCommon(), PostRate: time.Minute, Subscribed: 15 * time.Minute}
+	c := runConfig{Common: newCommon(), PostRate: time.Minute, Subscribed: 15 * time.Minute, MaxConns: defaultListenerConns}
 	cmd := &cobra.Command{
 		Use:   "run",
 		Short: "Run a device agent: register, poll, schedule events and answer them",
@@ -63,6 +64,9 @@ not fix (a refused certificate, a PIN that does not match), with that error's ex
 				}
 				if c.Listen != "" && c.NotifyURL == "" && strings.HasPrefix(c.Listen, "0.0.0.0") {
 					return errs.InvalidInput(errs.CodeInvalidFlagCombination, "--notify-listen on 0.0.0.0 needs --notify-url, the URL the server reaches", nil)
+				}
+				if c.MaxConns < 0 {
+					return errs.InvalidInput(errs.CodeInvalidInput, "--notify-max-connections must not be negative (0: no limit)", nil)
 				}
 				return nil
 			}, c.run)
@@ -219,7 +223,7 @@ func (c *runConfig) run(ctx context.Context, out *format.StreamWriter) (int, err
 	if c.Listen != "" {
 		mux := http.NewServeMux()
 		mux.Handle("/notify", a.NotificationHandler())
-		local, stop, err := listen(ctx, c.Listen, d.Cert, d, c.Anonymous, mux)
+		local, stop, err := listen(ctx, c.Listen, d.Cert, d, c.Anonymous, c.MaxConns, mux)
 		if err != nil {
 			return 0, err
 		}

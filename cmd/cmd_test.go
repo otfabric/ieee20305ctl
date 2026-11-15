@@ -179,6 +179,22 @@ func TestClientAgainstServer(t *testing.T) {
 	if r := run(t, "server", "issue-control", "--set", "opModExpLimW=1500"); r.code != 2 {
 		t.Errorf("issue-control without --yes: %+v", r)
 	}
+	// cancel and set-default change what devices receive too: without --yes
+	// they exit 2 with confirmation_required, and the server is unchanged.
+	for _, args := range [][]string{
+		{"server", "cancel", "/derp/1/derc/1"},
+		{"server", "set-default", "--set", "opModMaxLimW=10"},
+	} {
+		if r := run(t, append(args, "--format", "json")...); r.code != 2 || !strings.Contains(r.stdout, `"confirmation_required"`) {
+			t.Errorf("%s without --yes: %+v", strings.Join(args[:2], " "), r)
+		}
+	}
+	if r := must(t, 0, "server", "get", "/derp/1/dderc"); !strings.Contains(r.stdout, "<opModMaxLimW>10000</opModMaxLimW>") {
+		t.Errorf("the default after set-default without --yes: %s", r.stdout)
+	}
+	if r := must(t, 0, "server", "get", "/derp/1/derc/1"); strings.Contains(r.stdout, "<currentStatus>2</currentStatus>") {
+		t.Errorf("the control after cancel without --yes: %s", r.stdout)
+	}
 	if r := run(t, "server", "issue-control", "--set", "opModExpLimW=1500", "--yes"); r.code != 3 || !strings.Contains(r.stderr, "--profile csipaus") {
 		t.Errorf("a CSIP-AUS setting on a server of IEEE 2030.5: %+v", r)
 	}

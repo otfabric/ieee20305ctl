@@ -71,11 +71,12 @@ type startConfig struct {
 	LogRequests    bool          `flag:"log-requests" desc:"Write a record for every request"`
 	NotifyLoopback bool          `flag:"notify-loopback" desc:"Deliver notifications to loopback and link-local addresses too (for local tests)"`
 	Advertise      bool          `flag:"advertise" desc:"Advertise the server with DNS-SD (_smartenergy._tcp) on the local network"`
+	MaxConns       int           `flag:"max-connections" desc:"Most connections open at once, TLS handshakes included; more wait until one closes (0: no limit)"`
 	Format         string        `flag:"format" env:"IEEE20305CTL_FORMAT" desc:"Output format: text, json or table"`
 }
 
 func newStartCmd() *cobra.Command {
-	c := startConfig{Listen: "0.0.0.0:8443", Profile: "ieee20305", Edition: "2023", Format: "text"}
+	c := startConfig{Listen: "0.0.0.0:8443", Profile: "ieee20305", Edition: "2023", Format: "text", MaxConns: defaultServerConns}
 	cmd := &cobra.Command{
 		Use:   "start",
 		Short: "Serve IEEE 2030.5 to devices",
@@ -113,7 +114,31 @@ func (c *startConfig) validate() error {
 	if _, err := ieee20305.ParseEdition(c.Edition); err != nil {
 		return errs.InvalidInput(errs.CodeInvalidInput, fmt.Sprintf("--edition %q: 2023 or 2018", c.Edition), err)
 	}
+	if c.MaxConns < 0 {
+		return errs.InvalidInput(errs.CodeInvalidInput, "--max-connections must not be negative (0: no limit)", nil)
+	}
 	return nil
+}
+
+// The limits of the HTTP server of server start. A request of a device and
+// its answer are small documents (the go-ieee20305 server bounds bodies
+// itself): a peer that stalls a request, does not read its answer, or
+// keeps a connection idle is cut off.
+var (
+	readTimeout    = 30 * time.Second // a request, its body included
+	writeTimeout   = 30 * time.Second // from the end of the request's headers to the end of the answer
+	idleTimeout    = 2 * time.Minute  // a keep-alive connection between requests
+	maxHeaderBytes = 64 << 10         // the headers of a request
+)
+
+// defaultServerConns is the default of --max-connections: the connections
+// open at once, TLS handshakes included, beyond which more wait.
+const defaultServerConns = 256
+
+// newHTTPServer is the HTTP server of server start, serving h.
+func newHTTPServer(h http.Handler) *http.Server {
+	return &http.Server{Handler: h, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: readTimeout, WriteTimeout: writeTimeout,
+		IdleTimeout: idleTimeout, MaxHeaderBytes: maxHeaderBytes, ErrorLog: log.New(io.Discard, "", 0)}
 }
 
 func (c *startConfig) run(ctx context.Context, out *format.StreamWriter) (int, error) {
@@ -167,16 +192,19 @@ func (c *startConfig) run(ctx context.Context, out *format.StreamWriter) (int, e
 		}
 		emit(&types.Event{Time: time.Now().UTC(), Kind: "control_socket", Address: c.ControlSocket})
 	}
-	l := net.Listener(inner)
-	hs := &http.Server{Handler: s.Server, ReadHeaderTimeout: 10 * time.Second, ErrorLog: log.New(io.Discard, "", 0)}
+	// The limit is on the TCP connections, before TLS: a connection that
+	// waits for a slot has not started its handshake.
+	limited := conn.LimitListener(inner, c.MaxConns)
+	l := limited
+	hs := newHTTPServer(s.Server)
 	if c.CCM8 {
-		if l, err = tlsccm.NewListener(inner, cert, roots, tlsccm.Options{AllowGCM: true}); err != nil {
+		if l, err = tlsccm.NewListener(limited, cert, roots, tlsccm.Options{AllowGCM: true}); err != nil {
 			_ = inner.Close()
 			return 0, errs.InvalidInput(errs.CodeInvalidCertificate, err.Error(), err)
 		}
 		tlsccm.ConfigureServer(hs)
 	} else {
-		l = tls.NewListener(inner, security.ServerTLSConfig(cert, roots))
+		l = tls.NewListener(limited, security.ServerTLSConfig(cert, roots))
 	}
 	go func() { _ = hs.Serve(l) }()
 	defer func() { _ = hs.Close() }()
@@ -288,7 +316,7 @@ func (d *Devices) MarshalTextOutput() (string, error) {
 		if x.Registered {
 			state = fmt.Sprintf("registered, PIN %d", x.PIN)
 		}
-		fmt.Fprintf(&b, "%s  LFDI %s  SFDI %s  %s\n", x.EndDevice, x.LFDI, x.SFDI, state)
+		fmt.Fprintf(&b, "%s  LFDI %s  SFDI %s  %s\n", format.Display(x.EndDevice), format.Display(x.LFDI), format.Display(x.SFDI), state)
 	}
 	return b.String(), nil
 }

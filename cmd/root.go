@@ -52,7 +52,7 @@ stderr. Exit codes are stable: see docs/exitcodes.md.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
-	root.PersistentFlags().Bool("debug", false, "Show the causes of an error, and the requests and answers of the library, on stderr")
+	root.PersistentFlags().Bool("debug", false, "Show the causes of an error, on stderr")
 	root.AddCommand(
 		client.NewCmd(),
 		server.NewCmd(),

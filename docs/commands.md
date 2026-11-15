@@ -3,8 +3,9 @@
 Every command of ieee20305ctl with its flags, as `--help` prints them. Run
 `ieee20305ctl <command> --help` for the description and examples of a
 command. Every command also has `-h`, `--help` and the global `--debug`
-(show the causes of an error, and the requests and answers of the library,
-on stderr).
+(show the causes of an error, on stderr). `--debug` does not log the
+requests and answers of the library; `server start --log-requests` writes a
+record of every request the server answers.
 
 Flags marked `[env: …]` can come from that environment variable; a flag given
 on the command line wins. Exit codes: [exitcodes.md](exitcodes.md).
@@ -405,6 +406,7 @@ ieee20305ctl client run [flags]
 | `--key` | string | Private key of the device certificate (PEM) [env: IEEE20305CTL_KEY] |
 | `--notify-allow-anonymous` | bool | Also take notifications from a peer that presents no certificate, as some servers (GridAPPS-D) post them; anyone who reaches the listener can then post notifications |
 | `--notify-listen` | string | Serve a notification listener on this address and subscribe to the device's programs (needs --notify-url when the address is not reachable as is) |
+| `--notify-max-connections` | int | Most connections to the notification listener open at once, TLS handshakes included; more wait until one closes (0: no limit) (default 64) |
 | `--notify-url` | string | URL the server posts notifications to |
 | `--pin` | uint32 | PIN the device was given out of band; the agent stops when the Registration has another (0: do not check) [env: IEEE20305CTL_PIN] |
 | `--poll-rate` | duration | Poll at this rate instead of the server's pollRate |
@@ -438,6 +440,7 @@ ieee20305ctl client subscribe <resource-href> [flags]
 | `--listen-allow-anonymous` | bool | Also take notifications from a peer that presents no certificate, as some servers (GridAPPS-D) post them; anyone who reaches the listener can then post notifications |
 | `--listen-cert` | string | Certificate of the listener (default: the device certificate) |
 | `--listen-key` | string | Key of the listener (default: the device key) |
+| `--listen-max-connections` | int | Most connections to the listener open at once, TLS handshakes included; more wait until one closes (0: no limit) (default 64) |
 | `--notify-url` | string | URL the server posts notifications to (default: https://<--listen>/notify, which needs a --listen address the server can reach) |
 | `--profile` | string | Document profile: ieee20305 or csipaus (CSIP-AUS types and site limits) [env: IEEE20305CTL_PROFILE] (default "ieee20305") |
 | `--timeout` | duration | Time limit of each request [env: IEEE20305CTL_TIMEOUT] (default 30s) |
@@ -617,6 +620,7 @@ ieee20305ctl server start [flags]
 | `--key` | string | Private key of the server certificate (PEM) [env: IEEE20305CTL_SERVER_KEY] |
 | `--listen` | string | Address to listen on [env: IEEE20305CTL_LISTEN] (default "0.0.0.0:8443") |
 | `--log-requests` | bool | Write a record for every request |
+| `--max-connections` | int | Most connections open at once, TLS handshakes included; more wait until one closes (0: no limit) (default 256) |
 | `--notify-loopback` | bool | Deliver notifications to loopback and link-local addresses too (for local tests) |
 | `--profile` | string | Profile: ieee20305 or csipaus (CSIP-AUS documents, connection points, IEEE 2030.5-2018) [env: IEEE20305CTL_PROFILE] (default "ieee20305") |
 

@@ -24,6 +24,7 @@ import (
 
 	"github.com/otfabric/ieee20305ctl/internal/conn"
 	"github.com/otfabric/ieee20305ctl/internal/errs"
+	"github.com/otfabric/ieee20305ctl/internal/format"
 	"github.com/otfabric/ieee20305ctl/internal/runner"
 )
 
@@ -287,7 +288,9 @@ type HMNInfo struct {
 
 func (info *Info) MarshalTextOutput() (string, error) {
 	var b strings.Builder
-	row := func(k, v string) { fmt.Fprintf(&b, "%-20s %s\n", k+":", v) }
+	// The fields of a certificate are the issuer's to choose: shown escaped
+	// when they hold what is not printable.
+	row := func(k, v string) { fmt.Fprintf(&b, "%-20s %s\n", k+":", format.Display(v)) }
 	row("Subject", info.Subject)
 	row("Issuer", info.Issuer)
 	row("Serial", info.Serial)
@@ -299,7 +302,11 @@ func (info *Info) MarshalTextOutput() (string, error) {
 	row("Public key", info.PublicKey)
 	row("CA", strconv.FormatBool(info.IsCA))
 	if len(info.DNSNames) > 0 {
-		row("DNS names", strings.Join(info.DNSNames, ", "))
+		names := make([]string, len(info.DNSNames))
+		for i, n := range info.DNSNames {
+			names[i] = format.Display(n)
+		}
+		row("DNS names", strings.Join(names, ", "))
 	}
 	if len(info.IPAddresses) > 0 {
 		row("IP addresses", strings.Join(info.IPAddresses, ", "))
@@ -308,7 +315,7 @@ func (info *Info) MarshalTextOutput() (string, error) {
 		row("Key usages", strings.Join(info.ExtKeyUsages, ", "))
 	}
 	if info.HMN != nil {
-		row("Hardware module", info.HMN.Type+" serial "+info.HMN.Serial)
+		row("Hardware module", format.Display(info.HMN.Type)+" serial "+format.Display(info.HMN.Serial))
 	}
 	row("LFDI", info.LFDI)
 	row("SFDI", info.SFDI)

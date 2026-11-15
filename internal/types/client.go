@@ -11,8 +11,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/otfabric/ieee20305ctl/internal/format"
 	"github.com/otfabric/ieee20305ctl/internal/ieee"
 )
+
+// The text renderers pass the strings of the server (hrefs, names, ids)
+// through display: see format.Display. Descriptions are quoted.
+var display = format.Display
 
 // Link is a link of a resource.
 type Link struct {
@@ -30,13 +35,13 @@ type Capability struct {
 
 func (c *Capability) MarshalTextOutput() (string, error) {
 	var b strings.Builder
-	fmt.Fprintf(&b, "DeviceCapability %s (poll every %d s)\n", c.URL, c.PollRate)
+	fmt.Fprintf(&b, "DeviceCapability %s (poll every %d s)\n", display(c.URL), c.PollRate)
 	for _, l := range c.Links {
 		all := ""
 		if l.All != nil {
 			all = fmt.Sprintf(" (%d)", *l.All)
 		}
-		fmt.Fprintf(&b, "  %-34s %s%s\n", l.Name, l.Href, all)
+		fmt.Fprintf(&b, "  %-34s %s%s\n", l.Name, display(l.Href), all)
 	}
 	return b.String(), nil
 }
@@ -107,7 +112,7 @@ func (r *Registration) MarshalTextOutput() (string, error) {
 	if r.Created {
 		verb = "created"
 	}
-	fmt.Fprintf(&b, "EndDevice %s (%s)\n  LFDI %s\n  SFDI %s\n", r.EndDevice, verb, r.LFDI, r.SFDI)
+	fmt.Fprintf(&b, "EndDevice %s (%s)\n  LFDI %s\n  SFDI %s\n", display(r.EndDevice), verb, r.LFDI, r.SFDI)
 	switch {
 	case !r.Registered:
 		b.WriteString("  not registered by the server yet\n")
@@ -158,7 +163,7 @@ func (s *WalkStep) MarshalTextOutput() (string, error) {
 	if s.Items != nil {
 		items = fmt.Sprintf(" [%d]", *s.Items)
 	}
-	return fmt.Sprintf("%s%s %s%s", strings.Repeat("  ", s.Depth), s.Href, s.Element, items), nil
+	return fmt.Sprintf("%s%s %s%s", strings.Repeat("  ", s.Depth), display(s.Href), display(s.Element), items), nil
 }
 
 func (s *WalkStep) TableHeaders() []string {
@@ -208,7 +213,7 @@ func (p *Programs) MarshalTextOutput() (string, error) {
 	}
 	var b strings.Builder
 	for _, pr := range p.Programs {
-		fmt.Fprintf(&b, "%s  primacy %d  %s\n", pr.Href, pr.Primacy, quote(pr.Description))
+		fmt.Fprintf(&b, "%s  primacy %d  %s\n", display(pr.Href), pr.Primacy, quote(pr.Description))
 		fmt.Fprintf(&b, "  default   %s\n", settingsText(pr.Default))
 		fmt.Fprintf(&b, "  controls  %d (%d active)\n", pr.Controls, pr.Active)
 	}
@@ -238,11 +243,11 @@ func (c *Controls) MarshalTextOutput() (string, error) {
 	}
 	var b strings.Builder
 	for _, ct := range c.Controls {
-		fmt.Fprintf(&b, "%s  %s  %s\n", ct.Href, ct.Status, quote(ct.Description))
-		fmt.Fprintf(&b, "  %s for %s (program %s)\n", ct.Start.Format(time.RFC3339), time.Duration(ct.DurationS)*time.Second, ct.Program)
+		fmt.Fprintf(&b, "%s  %s  %s\n", display(ct.Href), ct.Status, quote(ct.Description))
+		fmt.Fprintf(&b, "  %s for %s (program %s)\n", ct.Start.Format(time.RFC3339), time.Duration(ct.DurationS)*time.Second, display(ct.Program))
 		fmt.Fprintf(&b, "  %s\n", settingsText(ct.Settings))
 		if ct.ReplyTo != "" {
-			fmt.Fprintf(&b, "  responses %s to %s\n", ct.ResponseRequired, ct.ReplyTo)
+			fmt.Fprintf(&b, "  responses %s to %s\n", display(ct.ResponseRequired), display(ct.ReplyTo))
 		}
 	}
 	return b.String(), nil
@@ -266,7 +271,7 @@ func settingsText(s []ieee.Setting) string {
 	}
 	parts := make([]string, len(s))
 	for i, x := range s {
-		parts[i] = x.Name + "=" + x.Text
+		parts[i] = x.Name + "=" + display(x.Text)
 	}
 	return strings.Join(parts, " ")
 }
@@ -288,12 +293,12 @@ type Posted struct {
 }
 
 func (p *Posted) MarshalTextOutput() (string, error) {
-	s := fmt.Sprintf("%s: posted to %s", p.Action, p.Target)
+	s := fmt.Sprintf("%s: posted to %s", p.Action, display(p.Target))
 	if p.Location != "" {
-		s += ", created " + p.Location
+		s += ", created " + display(p.Location)
 	}
 	if p.Detail != "" {
-		s += "\n  " + p.Detail
+		s += "\n  " + display(p.Detail)
 	}
 	return s, nil
 }
@@ -310,7 +315,11 @@ type Written struct {
 }
 
 func (w *Written) MarshalTextOutput() (string, error) {
-	return fmt.Sprintf("%s: %s", w.Action, strings.Join(w.Hrefs, ", ")), nil
+	hrefs := make([]string, len(w.Hrefs))
+	for i, h := range w.Hrefs {
+		hrefs[i] = display(h)
+	}
+	return fmt.Sprintf("%s: %s", w.Action, strings.Join(hrefs, ", ")), nil
 }
 
 func (w *Written) TableHeaders() []string { return []string{"ACTION", "HREF"} }
@@ -348,13 +357,13 @@ func (d *DERs) MarshalTextOutput() (string, error) {
 	}
 	var b strings.Builder
 	for _, der := range d.DERs {
-		fmt.Fprintf(&b, "DER %s\n", der.Href)
+		fmt.Fprintf(&b, "DER %s\n", display(der.Href))
 		for _, r := range der.Resources {
 			state := "not set"
 			if r.Set {
 				state = "set"
 			}
-			fmt.Fprintf(&b, "  %-16s %-28s %s\n", r.Name, r.Href, state)
+			fmt.Fprintf(&b, "  %-16s %-28s %s\n", r.Name, display(r.Href), state)
 			if r.XML != "" {
 				for line := range strings.SplitSeq(strings.TrimSpace(r.XML), "\n") {
 					fmt.Fprintf(&b, "    %s\n", line)
@@ -416,13 +425,13 @@ func (p *Pricing) MarshalTextOutput() (string, error) {
 	}
 	var b strings.Builder
 	for _, t := range p.Tariffs {
-		fmt.Fprintf(&b, "%s  %s  primacy %d", t.Href, quote(t.Description), t.Primacy)
+		fmt.Fprintf(&b, "%s  %s  primacy %d", display(t.Href), quote(t.Description), t.Primacy)
 		if t.Currency != nil {
 			fmt.Fprintf(&b, "  currency %d", *t.Currency)
 		}
 		b.WriteString("\n")
 		for _, rc := range t.RateComponents {
-			fmt.Fprintf(&b, "  %s  %s\n", rc.Href, quote(rc.Description))
+			fmt.Fprintf(&b, "  %s  %s\n", display(rc.Href), quote(rc.Description))
 			for _, iv := range rc.Intervals {
 				price := "-"
 				if iv.Price != nil {
@@ -481,9 +490,9 @@ type ConnectionPoint struct {
 
 func (c *ConnectionPoint) MarshalTextOutput() (string, error) {
 	if c.ID == "" {
-		return fmt.Sprintf("connection point %s: not set", c.Href), nil
+		return fmt.Sprintf("connection point %s: not set", display(c.Href)), nil
 	}
-	return fmt.Sprintf("connection point %s: %s", c.Href, c.ID), nil
+	return fmt.Sprintf("connection point %s: %s", display(c.Href), display(c.ID)), nil
 }
 
 func (c *ConnectionPoint) TableHeaders() []string { return []string{"END_DEVICE", "HREF", "ID"} }
@@ -505,7 +514,10 @@ type Event struct {
 	LFDI     string         `json:"lfdi,omitempty"`
 	Address  string         `json:"address,omitempty"`
 	Code     int            `json:"code,omitempty"`
-	Message  string         `json:"message,omitempty"`
+	// Dropped is how many notifications client subscribe did not write
+	// (notifications_dropped).
+	Dropped int64  `json:"dropped,omitempty"`
+	Message string `json:"message,omitempty"`
 }
 
 func (e *Event) MarshalTextOutput() (string, error) {
@@ -514,7 +526,7 @@ func (e *Event) MarshalTextOutput() (string, error) {
 	for _, kv := range [][2]string{{"", e.Status}, {"", e.Href}, {"resource ", e.Resource}, {"mrid ", e.MRID},
 		{"lfdi ", e.LFDI}, {"", e.Address}, {"", e.Message}} {
 		if kv[1] != "" {
-			b.WriteString(" " + kv[0] + kv[1])
+			b.WriteString(" " + kv[0] + display(kv[1]))
 		}
 	}
 	if e.Code != 0 {

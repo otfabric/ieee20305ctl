@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"sync/atomic"
 	"time"
 
 	ieee20305 "github.com/otfabric/go-ieee20305"
@@ -174,6 +175,7 @@ type subscribeConfig struct {
 	ListenCert  string        `flag:"listen-cert" desc:"Certificate of the listener (default: the device certificate)"`
 	ListenKey   string        `flag:"listen-key" desc:"Key of the listener (default: the device key)"`
 	Anonymous   bool          `flag:"listen-allow-anonymous" desc:"Also take notifications from a peer that presents no certificate, as some servers (GridAPPS-D) post them; anyone who reaches the listener can then post notifications"`
+	MaxConns    int           `flag:"listen-max-connections" desc:"Most connections to the listener open at once, TLS handshakes included; more wait until one closes (0: no limit)"`
 	Limit       uint32        `flag:"limit" desc:"Most items of a list a notification carries"`
 	Count       int           `flag:"count" desc:"Stop after this many notifications (0: until interrupted or --duration)"`
 	Duration    time.Duration `flag:"duration" desc:"Stop after this long (0: until interrupted or --count)"`
@@ -181,7 +183,7 @@ type subscribeConfig struct {
 }
 
 func newSubscribeCmd() *cobra.Command {
-	c := subscribeConfig{Common: newCommon(), Listen: "0.0.0.0:8443", Limit: 10}
+	c := subscribeConfig{Common: newCommon(), Listen: "0.0.0.0:8443", Limit: 10, MaxConns: defaultListenerConns}
 	cmd := &cobra.Command{
 		Use:   "subscribe <resource-href>",
 		Short: "Subscribe to a resource and stream the notifications the server sends",
@@ -218,17 +220,22 @@ func (c *subscribeConfig) validate() error {
 	if (c.ListenCert == "") != (c.ListenKey == "") {
 		return errs.InvalidInput(errs.CodeInvalidFlagCombination, "give --listen-cert and --listen-key together", nil)
 	}
+	if c.MaxConns < 0 {
+		return errs.InvalidInput(errs.CodeInvalidInput, "--listen-max-connections must not be negative (0: no limit)", nil)
+	}
 	return nil
 }
 
 // listen serves h on --listen over TLS, and returns the listener's URL.
 // A peer must present a certificate that the device's CAs issued, unless
-// anonymous is set: then a peer without one is taken too.
-func listen(ctx context.Context, addr string, cert tls.Certificate, d *conn.Device, anonymous bool, h http.Handler) (string, func(), error) {
-	l, err := net.Listen("tcp", addr)
+// anonymous is set: then a peer without one is taken too. At most maxConns
+// connections are open at once (0: no limit).
+func listen(ctx context.Context, addr string, cert tls.Certificate, d *conn.Device, anonymous bool, maxConns int, h http.Handler) (string, func(), error) {
+	inner, err := net.Listen("tcp", addr)
 	if err != nil {
 		return "", nil, errs.New(errs.KindTransport, errs.CodeListenFailed, fmt.Sprintf("listen on %s: %v", addr, err), err)
 	}
+	l := conn.LimitListener(inner, maxConns)
 	// The check is in VerifyConnection, which crypto/tls also calls on a
 	// resumed session (VerifyPeerCertificate it skips).
 	auth := tls.RequireAnyClientCert
@@ -278,11 +285,22 @@ func (c *subscribeConfig) run(ctx context.Context, out *format.StreamWriter, res
 		ctx, cancel = context.WithTimeout(ctx, c.Duration)
 		defer cancel()
 	}
-	notes := make(chan *ieee20305.Notification, 16)
+	// The handler never blocks the listener: a notification that finds the
+	// queue full is answered as taken, not written, and counted; the count
+	// is reported in a notifications_dropped record. Once the subscription
+	// is made, a notification of another one is left out before the queue,
+	// so it takes no slot of this command's own.
+	notes := make(chan *ieee20305.Notification, notifyQueue)
+	var mine atomic.Pointer[string]
+	var dropped atomic.Int64
 	h, err := ieeeclient.NewNotificationHandler(func(_ context.Context, n *ieee20305.Notification) error {
+		if sub := mine.Load(); sub != nil && !sameHref(n.SubscriptionURI, *sub) {
+			return nil
+		}
 		select {
 		case notes <- n:
 		default:
+			dropped.Add(1)
 		}
 		return nil
 	}, ieeeclient.NotificationConfig{Codec: d.Codec})
@@ -291,7 +309,7 @@ func (c *subscribeConfig) run(ctx context.Context, out *format.StreamWriter, res
 	}
 	mux := http.NewServeMux()
 	mux.Handle("/notify", h)
-	local, stop, err := listen(ctx, c.Listen, cert, d, c.Anonymous, mux)
+	local, stop, err := listen(ctx, c.Listen, cert, d, c.Anonymous, c.MaxConns, mux)
 	if err != nil {
 		return 0, err
 	}
@@ -307,6 +325,16 @@ func (c *subscribeConfig) run(ctx context.Context, out *format.StreamWriter, res
 	if err != nil {
 		return 0, conn.Classify(err, true)
 	}
+	mine.Store(&sub)
+	// reportDropped writes a notifications_dropped record when the handler
+	// has dropped notifications since the last one.
+	reportDropped := func() error {
+		if n := dropped.Swap(0); n > 0 {
+			return out.Write(&types.Event{Time: now(), Kind: "notifications_dropped", Href: sub, Dropped: n,
+				Message: fmt.Sprintf("%d notifications not written: the queue of %d was full", n, notifyQueue)})
+		}
+		return nil
+	}
 	if !c.KeepOnClose {
 		defer func() {
 			uctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -316,6 +344,7 @@ func (c *subscribeConfig) run(ctx context.Context, out *format.StreamWriter, res
 			}
 		}()
 	}
+	defer func() { _ = reportDropped() }() // before unsubscribed
 	if err := out.Write(&types.Event{Time: now(), Kind: "subscribed", Href: sub, Resource: resource}); err != nil {
 		return 0, errs.Output(errs.CodeOutputWriteFailed, err)
 	}
@@ -325,7 +354,7 @@ func (c *subscribeConfig) run(ctx context.Context, out *format.StreamWriter, res
 			return errs.ExitOK, nil
 		case note := <-notes:
 			if !sameHref(note.SubscriptionURI, sub) {
-				continue // not of the subscription this command made
+				continue // it arrived before the subscription was made, and is of another
 			}
 			n++
 			ev := &types.Event{Time: now(), Kind: "notification", Resource: note.SubscribedResource, Code: int(note.Status),
@@ -339,10 +368,22 @@ func (c *subscribeConfig) run(ctx context.Context, out *format.StreamWriter, res
 			if err := out.Write(ev); err != nil {
 				return 0, errs.Output(errs.CodeOutputWriteFailed, err)
 			}
+			if err := reportDropped(); err != nil {
+				return 0, errs.Output(errs.CodeOutputWriteFailed, err)
+			}
 		}
 	}
 	return errs.ExitOK, nil
 }
+
+// defaultListenerConns is the default of --listen-max-connections and
+// --notify-max-connections: a server delivers its notifications over a few
+// connections.
+const defaultListenerConns = 64
+
+// notifyQueue is how many notifications client subscribe holds while it
+// writes the records of earlier ones.
+const notifyQueue = 16
 
 // sameHref reports whether two hrefs name the same resource: by path, as a
 // server may write its href absolute or relative.

@@ -242,15 +242,17 @@ func scale48(v int64) (ieee20305.Int48, ieee20305.PowerOfTenMultiplierType) {
 }
 
 // scale16 returns v as an Int16 value and a power-of-ten multiplier, or an
-// error when that would drop digits.
+// error when that would drop digits or need a multiplier above 9, the
+// largest IEEE 2030.5 gives a PowerOfTenMultiplierType.
 func scale16(v int64) (ieee20305.Int16, ieee20305.PowerOfTenMultiplierType, error) {
 	var m ieee20305.PowerOfTenMultiplierType
+	in := v
 	for {
 		if v >= math.MinInt16 && v <= math.MaxInt16 {
 			return ieee20305.Int16(v), m, nil
 		}
-		if v%10 != 0 {
-			return 0, 0, fmt.Errorf("%d W does not fit a value with a power-of-ten multiplier", v)
+		if v%10 != 0 || m == 9 {
+			return 0, 0, fmt.Errorf("%d W does not fit a value with a power-of-ten multiplier of -9 to 9", in)
 		}
 		v /= 10
 		m++

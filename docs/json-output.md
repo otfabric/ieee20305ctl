@@ -150,7 +150,7 @@ happens.
 
 Every record has `time` and `event`; the other fields are set as the event
 has them: `href`, `resource`, `status`, `mrid`, `settings`, `start`, `end`,
-`lfdi`, `address`, `code`, `message`.
+`lfdi`, `address`, `code`, `dropped`, `message`.
 
 | `event` | From | Fields |
 |---------|------|--------|
@@ -164,6 +164,7 @@ has them: `href`, `resource`, `status`, `mrid`, `settings`, `start`, `end`,
 | `start_failed` | run | `message`: why the agent could not start (it tries again with backoff, or stops when waiting cannot help) |
 | `subscribed`, `unsubscribed` | subscribe | `href` (the Subscription), `resource` |
 | `notification` | subscribe | `resource` (subscribed), `code` and `status` (0 `changed`, or why the server cancelled), `href` and `message` (the document carried) |
+| `notifications_dropped` | subscribe | `href` (the Subscription), `dropped`: how many notifications were not written since the last such record, because the queue of 16 that holds them while earlier records are written was full; `message`. Notifications of other subscriptions take no place in the queue. The listener answered the dropped ones as taken, so the server does not send them again. Written after the next `notification` record, or when the command ends |
 | `notification` | server | `resource` (WADL), `message`: the delivery's duration |
 | `notification_failed`, `subscription_cancelled` | server | `resource`, `message` or `code` |
 | `device_provisioned` | server | `href`, `lfdi`, `message` (SFDI, role, edition) |

@@ -33,7 +33,14 @@ func (s *Service) MarshalTextOutput() (string, error) {
 	if s.Removed {
 		state = " (gone)"
 	}
-	return fmt.Sprintf("%s%s\n  %s:%d %s\n  %s", s.Instance, state, s.Host, s.Port, strings.Join(s.Addrs, " "), s.URL), nil
+	// Instance and host come from any host on the link: shown escaped
+	// when they hold what is not printable.
+	addrs := make([]string, len(s.Addrs))
+	for i, a := range s.Addrs {
+		addrs[i] = format.Display(a)
+	}
+	return fmt.Sprintf("%s%s\n  %s:%d %s\n  %s", format.Display(s.Instance), state, format.Display(s.Host), s.Port,
+		strings.Join(addrs, " "), format.Display(s.URL)), nil
 }
 
 func (s *Service) TableHeaders() []string {

@@ -4,6 +4,42 @@ Releases are cut with the `Release` workflow (semantic versioning, annotated
 tag, GitHub release with binaries for every platform). The section of the
 version below, up to the `---` that ends it, is the release's notes.
 
+## v0.8.0
+
+**Date:** 2026-11-15
+**Previous release:** v0.7.1
+
+Adds three connection-limit flags, on by default (256 and 64), and a record of `client subscribe`, gives `server start` read, write and idle timeouts, and checks DER control settings against the ranges IEEE 2030.5 gives them. The operator commands exit 5 or 130, not 4, when the control socket does not reply in time or the wait is interrupted. Still built on go-ieee20305 v0.8.0 and go-ieee20305/tlsccm v0.4.0.
+
+### Breaking
+
+- **The operator commands exit 5 or 130 when the control socket does not reply, as docs/exitcodes.md says.** `server devices`, `get`, `issue-control`, `cancel`, `set-default`, `provision` and `register` exit 5 when the control socket took the request and gave no reply within `--timeout`: `outcome_unknown` for the commands that may have changed the server, `request_timeout` for `devices` and `get`. Ctrl-C while waiting exits 130 at once. Both were exit 4 (`control_socket_failed`), which is now only for a socket that cannot be opened or that closes without a reply (docs/server-config.md). A script that treated exit 4 as "the request may have been applied" checks for 5 now; there is no option for the old exit code.
+- **Connections are limited by default:** `server start` serves at most 256 connections at once, and the notification listeners of `client subscribe` and `client run` at most 64; a further connection waits until one closes. Before, there was no limit. To keep the old handling, give `--max-connections 0`, `--listen-max-connections 0` or `--notify-max-connections 0`.
+
+### Added
+
+- `server start --max-connections N`, `client subscribe --listen-max-connections N` and `client run --notify-max-connections N`: at most N connections are open at once, TLS handshakes included; more wait until one closes. 0 is no limit; a negative N is invalid input (exit 3). The defaults are under Breaking.
+- `client subscribe` writes a `notifications_dropped` record, with the new field `dropped`, when notifications of its subscription did not fit its queue of 16; it is written after the next notification, or when the command ends (docs/json-output.md).
+- SECURITY.md: the threat model, the defaults and how to weaken them, the resource limits and the known limitations.
+
+### Changed
+
+- `server start`: a connection must send its whole request within 30 s (its headers within 10 s, as before) and take its answer within 30 s; an idle keep-alive connection is closed after 2 minutes; request headers above 64 KiB are answered 431 (docs/server-config.md).
+- DER control settings (`server issue-control --set`, `server set-default --set`, the `set` of a control socket request, and the seed of `server start`) are checked against the ranges of IEEE 2030.5. A value outside them is invalid input (exit 3), where it was accepted before:
+  - a percentage below 0 or above 100 (below -100 for `opModFixedW` and `opModFixedV`), and `opModFixedVar`, `opModMaxLimPctVarInject` and `opModMaxLimPctVarAbsorb` outside -10000 (0) to 10000 hundredths;
+  - a power, var or volt value that does not fit a power-of-ten multiplier of -9 to 9, that is, of a magnitude above 32,767 × 10^9; a value that fits is always stored with a multiplier in that range;
+  - a number that is not finite.
+- Every percentage with two decimals is taken, with its exact hundredths; some, such as `0.29`, were refused with "has more precision than the control holds".
+- `client flow-reservation --power`: a value that does not fit a power-of-ten multiplier of -9 to 9 is invalid input (exit 3).
+- Text and table output show strings that come from peers and files (hrefs, certificate subjects and names, DNS-SD names, event fields, table cells) quoted, with escapes, when they hold a character that is not printable. Printable strings, and JSON output, are unchanged.
+- `server start --control-socket`: on Unix systems the socket is created without group or other permissions, and then set to mode 0600 as before.
+- `client subscribe` sets aside notifications of other subscriptions before its queue, so that they no longer take its places.
+- The help text of `--debug` says what it does: it shows the causes of an error, on stderr. It does not log the requests and answers of the library (docs/commands.md).
+- AGENTS.md hard rule 5 names the commands that require `--yes`, as docs/exitcodes.md does: `server issue-control`, `cancel`, `set-default` and `client delete`. The commands themselves are unchanged.
+- README.md and docs/guide.md date the interoperability recordings (2026-10-22, ieee20305ctl v0.2.0), and say that go-ieee20305 runs its interop suite on pull requests.
+
+---
+
 ## v0.7.1
 
 **Date:** 2026-11-15

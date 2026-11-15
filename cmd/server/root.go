@@ -76,7 +76,7 @@ type startConfig struct {
 }
 
 func newStartCmd() *cobra.Command {
-	c := startConfig{Listen: "0.0.0.0:8443", Profile: "ieee20305", Edition: "2023", Format: "text"}
+	c := startConfig{Listen: "0.0.0.0:8443", Profile: "ieee20305", Edition: "2023", Format: "text", MaxConns: defaultServerConns}
 	cmd := &cobra.Command{
 		Use:   "start",
 		Short: "Serve IEEE 2030.5 to devices",
@@ -130,6 +130,10 @@ var (
 	idleTimeout    = 2 * time.Minute  // a keep-alive connection between requests
 	maxHeaderBytes = 64 << 10         // the headers of a request
 )
+
+// defaultServerConns is the default of --max-connections: the connections
+// open at once, TLS handshakes included, beyond which more wait.
+const defaultServerConns = 256
 
 // newHTTPServer is the HTTP server of server start, serving h.
 func newHTTPServer(h http.Handler) *http.Server {

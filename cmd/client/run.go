@@ -39,7 +39,7 @@ type runConfig struct {
 }
 
 func newRunCmd() *cobra.Command {
-	c := runConfig{Common: newCommon(), PostRate: time.Minute, Subscribed: 15 * time.Minute}
+	c := runConfig{Common: newCommon(), PostRate: time.Minute, Subscribed: 15 * time.Minute, MaxConns: defaultListenerConns}
 	cmd := &cobra.Command{
 		Use:   "run",
 		Short: "Run a device agent: register, poll, schedule events and answer them",

@@ -189,12 +189,15 @@ func Call(ctx context.Context, path string, req Request, v any) error {
 	if dl, ok := ctx.Deadline(); ok {
 		_ = c.SetDeadline(dl)
 	}
+	// An interrupt ends the wait for the reply at once, not at the deadline.
+	stop := context.AfterFunc(ctx, func() { _ = c.SetDeadline(time.Unix(1, 0)) })
+	defer stop()
 	if err := json.NewEncoder(c).Encode(req); err != nil {
-		return errs.New(errs.KindTransport, errs.CodeControlSocketFailed, err.Error(), err)
+		return callFailed(ctx, req.Op, "", err)
 	}
 	var reply Reply
 	if err := json.NewDecoder(bufio.NewReader(c)).Decode(&reply); err != nil {
-		return errs.New(errs.KindTransport, errs.CodeControlSocketFailed, "no reply from the control socket: "+err.Error(), err)
+		return callFailed(ctx, req.Op, "no reply from the control socket: ", err)
 	}
 	if !reply.OK {
 		e := reply.Error
@@ -207,4 +210,26 @@ func Call(ctx context.Context, path string, req Request, v any) error {
 		return json.Unmarshal(reply.Result, v)
 	}
 	return nil
+}
+
+// readOnly are the operations that change nothing on the server.
+var readOnly = map[string]bool{"devices": true, "get": true}
+
+// callFailed is the error of a request to the control socket whose
+// connection failed once it was open. When ctx ended first, the error is
+// that of ctx: an interruption, or a timeout, whose outcome is unknown for
+// an operation that may have changed the server (it is not sent again).
+// Otherwise the socket failed: control_socket_failed.
+func callFailed(ctx context.Context, op, prefix string, err error) error {
+	switch cerr := ctx.Err(); {
+	case errors.Is(cerr, context.Canceled):
+		return errs.New(errs.KindInterrupted, errs.CodeContextCanceled, "interrupted", err)
+	case cerr != nil, errors.Is(err, os.ErrDeadlineExceeded):
+		if readOnly[op] {
+			return errs.New(errs.KindTimeout, errs.CodeRequestTimeout, "no reply from the control socket in time", err)
+		}
+		return errs.New(errs.KindTimeout, errs.CodeOutcomeUnknown,
+			"no reply from the control socket in time; the server may have applied the request", err)
+	}
+	return errs.New(errs.KindTransport, errs.CodeControlSocketFailed, prefix+err.Error(), err)
 }

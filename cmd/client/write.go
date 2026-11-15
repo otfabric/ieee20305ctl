@@ -183,7 +183,7 @@ type subscribeConfig struct {
 }
 
 func newSubscribeCmd() *cobra.Command {
-	c := subscribeConfig{Common: newCommon(), Listen: "0.0.0.0:8443", Limit: 10}
+	c := subscribeConfig{Common: newCommon(), Listen: "0.0.0.0:8443", Limit: 10, MaxConns: defaultListenerConns}
 	cmd := &cobra.Command{
 		Use:   "subscribe <resource-href>",
 		Short: "Subscribe to a resource and stream the notifications the server sends",
@@ -375,6 +375,11 @@ func (c *subscribeConfig) run(ctx context.Context, out *format.StreamWriter, res
 	}
 	return errs.ExitOK, nil
 }
+
+// defaultListenerConns is the default of --listen-max-connections and
+// --notify-max-connections: a server delivers its notifications over a few
+// connections.
+const defaultListenerConns = 64
 
 // notifyQueue is how many notifications client subscribe holds while it
 // writes the records of earlier ones.

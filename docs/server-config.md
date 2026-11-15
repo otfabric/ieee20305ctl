@@ -26,7 +26,7 @@ ieee20305ctl server start --cert server.pem --key server.key --ca ca.pem \
 | `--notify-loopback` | off | Deliver notifications to loopback and link-local URIs, which the server refuses by default |
 | `--advertise` | off | Advertise the server with DNS-SD (`_smartenergy._tcp`) |
 | `--log-requests` | off | A `request` record per request |
-| `--max-connections` | `0` | Most connections open at once, TLS handshakes included; more wait until one closes. 0: no limit |
+| `--max-connections` | `256` | Most connections open at once, TLS handshakes included; more wait until one closes. 0: no limit |
 | `--duration` | `0` | Stop after this long; 0: until interrupted |
 
 Every flag can come from the environment: `IEEE20305CTL_LISTEN`,
@@ -167,8 +167,13 @@ the operator commands. Whoever can connect to it can use every command:
 | `server register --lfdi L --pin N` | Registers a device (in-band, or provisioned `unregistered`) |
 
 Each takes `--control-socket` (or `IEEE20305CTL_CONTROL_SOCKET`) and
-`--format`. A control socket that does not answer is exit 4
-(`control_socket_failed`).
+`--format`. A control socket that cannot be opened, or that closes without a
+reply, is exit 4 (`control_socket_failed`). A request the server took and
+did not answer within `--timeout` is exit 5: `outcome_unknown` for
+`issue-control`, `cancel`, `set-default`, `provision` and `register` (the
+server may have acted: read its state before you repeat the command),
+`request_timeout` for `devices` and `get`. Ctrl-C while the command waits
+is exit 130.
 
 A Unix socket path is limited to about 100 bytes (104 on macOS, 108 on
 Linux): use a short path such as `/tmp/ieee20305.sock`.

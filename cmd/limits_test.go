@@ -54,6 +54,33 @@ func TestServerMaxConnections(t *testing.T) {
 	}
 }
 
+// The connection limits are on by default: 256 for server start, 64 for
+// the notification listeners.
+func TestMaxConnectionsDefaults(t *testing.T) {
+	root := NewRootCmd()
+	for _, c := range []struct {
+		path []string
+		flag string
+		want string
+	}{
+		{[]string{"server", "start"}, "max-connections", "256"},
+		{[]string{"client", "subscribe"}, "listen-max-connections", "64"},
+		{[]string{"client", "run"}, "notify-max-connections", "64"},
+	} {
+		cmd, _, err := root.Find(c.path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		f := cmd.Flags().Lookup(c.flag)
+		if f == nil {
+			t.Fatalf("%s has no --%s", strings.Join(c.path, " "), c.flag)
+		}
+		if f.DefValue != c.want {
+			t.Errorf("%s --%s defaults to %s, want %s", strings.Join(c.path, " "), c.flag, f.DefValue, c.want)
+		}
+	}
+}
+
 // A negative connection limit is invalid input: exit 3, nothing listens.
 func TestMaxConnectionsNegative(t *testing.T) {
 	s := startSite(t, "")

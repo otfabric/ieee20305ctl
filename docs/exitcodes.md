@@ -9,7 +9,7 @@ Every command of ieee20305ctl exits with one of these codes. They are a
 | 2 | `usage` | The command line is wrong: an unknown command or flag, a missing argument, a state-changing operator command without `--yes` |
 | 3 | `invalid_input` | Nothing was sent: a flag, file, certificate, seed or document is invalid; `validate` found an invalid document; an operator command named a program or resource the server does not have |
 | 4 | `transport` | No conversation with the peer: the connection was refused, the TLS handshake failed (a certificate refused by either end, or no common cipher suite), the listener or the control socket could not be opened |
-| 5 | `timeout` | No answer in `--timeout` |
+| 5 | `timeout` | No answer in `--timeout`, from the server or from the control socket |
 | 6 | `refused` | The server answered with an HTTP error (4xx or 5xx); the `ieee20305` object has the status |
 | 6 | `protocol` | The server broke the protocol, or its answer cannot be trusted: a document that does not decode, a Registration whose PIN is not the device's, a device the server has not registered |
 | 7 | | Partial success. Reserved with its organisation meaning (`ExitPartial`): no command of ieee20305ctl exits 7 today |

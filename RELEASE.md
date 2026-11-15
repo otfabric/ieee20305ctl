@@ -9,11 +9,16 @@ version below, up to the `---` that ends it, is the release's notes.
 **Date:** 2026-11-15
 **Previous release:** v0.7.1
 
-Adds three connection-limit flags and a record of `client subscribe`, gives `server start` read, write and idle timeouts, and checks DER control settings against the ranges IEEE 2030.5 gives them. Exit codes are unchanged. Still built on go-ieee20305 v0.8.0 and go-ieee20305/tlsccm v0.4.0.
+Adds three connection-limit flags, on by default (256 and 64), and a record of `client subscribe`, gives `server start` read, write and idle timeouts, and checks DER control settings against the ranges IEEE 2030.5 gives them. The operator commands exit 5 or 130, not 4, when the control socket does not reply in time or the wait is interrupted. Still built on go-ieee20305 v0.8.0 and go-ieee20305/tlsccm v0.4.0.
+
+### Breaking
+
+- **The operator commands exit 5 or 130 when the control socket does not reply, as docs/exitcodes.md says.** `server devices`, `get`, `issue-control`, `cancel`, `set-default`, `provision` and `register` exit 5 when the control socket took the request and gave no reply within `--timeout`: `outcome_unknown` for the commands that may have changed the server, `request_timeout` for `devices` and `get`. Ctrl-C while waiting exits 130 at once. Both were exit 4 (`control_socket_failed`), which is now only for a socket that cannot be opened or that closes without a reply (docs/server-config.md). A script that treated exit 4 as "the request may have been applied" checks for 5 now; there is no option for the old exit code.
+- **Connections are limited by default:** `server start` serves at most 256 connections at once, and the notification listeners of `client subscribe` and `client run` at most 64; a further connection waits until one closes. Before, there was no limit. To keep the old handling, give `--max-connections 0`, `--listen-max-connections 0` or `--notify-max-connections 0`.
 
 ### Added
 
-- `server start --max-connections N`, `client subscribe --listen-max-connections N` and `client run --notify-max-connections N`: at most N connections are open at once, TLS handshakes included; more wait until one closes. 0, the default, is no limit, as before; a negative N is invalid input (exit 3).
+- `server start --max-connections N`, `client subscribe --listen-max-connections N` and `client run --notify-max-connections N`: at most N connections are open at once, TLS handshakes included; more wait until one closes. 0 is no limit; a negative N is invalid input (exit 3). The defaults are under Breaking.
 - `client subscribe` writes a `notifications_dropped` record, with the new field `dropped`, when notifications of its subscription did not fit its queue of 16; it is written after the next notification, or when the command ends (docs/json-output.md).
 - SECURITY.md: the threat model, the defaults and how to weaken them, the resource limits and the known limitations.
 
@@ -30,6 +35,7 @@ Adds three connection-limit flags and a record of `client subscribe`, gives `ser
 - `server start --control-socket`: on Unix systems the socket is created without group or other permissions, and then set to mode 0600 as before.
 - `client subscribe` sets aside notifications of other subscriptions before its queue, so that they no longer take its places.
 - The help text of `--debug` says what it does: it shows the causes of an error, on stderr. It does not log the requests and answers of the library (docs/commands.md).
+- AGENTS.md hard rule 5 names the commands that require `--yes`, as docs/exitcodes.md does: `server issue-control`, `cancel`, `set-default` and `client delete`. The commands themselves are unchanged.
 - README.md and docs/guide.md date the interoperability recordings (2026-10-22, ieee20305ctl v0.2.0), and say that go-ieee20305 runs its interop suite on pull requests.
 
 ---

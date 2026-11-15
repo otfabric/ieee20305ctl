@@ -25,7 +25,7 @@ This repository follows **otfabric/engineering policy 1.6**, profile **cli** (`.
 2. Never lower `COVERAGE_MIN` or the CI `coverage-min`, add lint suppressions without a reason, or skip or delete tests to make CI pass.
 3. Never invent protocol semantics or claim interoperability or conformance beyond recorded evidence; protocol questions go to go-ieee20305.
 4. `github.com/otfabric/*` dependencies are pinned to released tags; no committed `replace` directives.
-5. A state-changing operator or client command requires `--yes` (exit 2 otherwise).
+5. The operator commands that change what devices receive (`server issue-control`, `cancel`, `set-default`) and `client delete` require `--yes` (exit 2 otherwise), as docs/exitcodes.md lists. A new command that changes what devices receive or deletes a resource requires it too; the other client commands that write (`client put`, `post` and the like) do not.
 
 ## Commands
 

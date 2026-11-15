@@ -73,9 +73,11 @@ Defaults that are open, and how to narrow them:
   has no confirmation and no users of its own: whoever can connect to it can
   issue and cancel controls and provision and register devices. Keep it in
   a directory only the operator can open.
-- No connection limit applies by default. `server start --max-connections`,
-  `client subscribe --listen-max-connections` and `client run
-  --notify-max-connections` set one (see below).
+- Connections are limited by default: 256 open at once to `server start`
+  (`--max-connections`), 64 to the notification listener of `client
+  subscribe` (`--listen-max-connections`) and `client run`
+  (`--notify-max-connections`). More wait until one closes; 0 removes the
+  limit.
 - `cert generate` makes a test PKI, for development and testing only. Its
   keys are written readable by their owner only.
 
@@ -90,7 +92,7 @@ Defaults that are open, and how to narrow them:
 | Notifications waiting to be written by `client subscribe` | 16; one that does not fit is counted and reported in a `notifications_dropped` record (docs/json-output.md) | |
 | Notification listener connections | Headers within 10 s, the whole request within 10 s, the answer within 30 s, idle 1 minute, headers of 16 KiB at most | `client run --notify-listen`, `client subscribe` |
 | `server start` connections | Headers within 10 s, the whole request within 30 s, the answer within 30 s, idle 2 minutes, headers of 64 KiB at most | |
-| Open connections, TLS handshakes included | None by default; `--max-connections N` (`server start`), `--listen-max-connections N` (`client subscribe`), `--notify-max-connections N` (`client run`): more connections wait until one closes | |
+| Open connections, TLS handshakes included | 256 (`server start --max-connections`), 64 (`client subscribe --listen-max-connections`, `client run --notify-max-connections`); more connections wait until one closes; 0: no limit | |
 | A control socket request | One line of 1 MiB; 30 s of work on the server; `--timeout` (30 s) in the operator command | |
 | DER control settings (`--set`, the seed) | Percentages 0–100 % (signed ones −100 % to 100 %), in hundredths at most; a power-of-ten multiplier of −9 to 9, so a power of at most 32,767 × 10^9 W; values outside are invalid input, exit 3 | `server issue-control`, `server set-default`, the seed |
 | `client flow-reservation --power` | A value that fits a power-of-ten multiplier of −9 to 9 | |
@@ -104,18 +106,11 @@ output escapes them as JSON does.
 
 ### Known limitations
 
-- **No connection limit by default.** Without the `--max-connections` flags,
-  a peer may hold many connections open, each up to the timeouts above.
 - **Documents are printed as they are.** `client get`, `client der show`
   and `server get` print a document as the peer sent it. XML
   admits carriage returns and the C1 control characters; use
   `--format json` to see them escaped. A fatal error's message on stderr
   is not escaped either; with `--format json` it is in the JSON envelope.
-- **The control socket's exit codes.** A control socket that takes a
-  request and does not answer within `--timeout`, or a command interrupted
-  while it waits, exits 4 (`control_socket_failed`), as for a socket that
-  cannot be opened; the command does not tell whether the server acted.
-  Read the server's state (`server get`) before repeating a command.
 - **The server is a test server.** It keeps its state in memory and has no
   operator accounts; the control socket is its only administration.
 - **DNS-SD is not authenticated.** `client discover` lists what hosts on the

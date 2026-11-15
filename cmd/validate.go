@@ -16,6 +16,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/otfabric/ieee20305ctl/internal/errs"
+	"github.com/otfabric/ieee20305ctl/internal/format"
 	"github.com/otfabric/ieee20305ctl/internal/runner"
 )
 
@@ -37,10 +38,11 @@ type Validation struct {
 func (v *Validation) MarshalTextOutput() (string, error) {
 	var b strings.Builder
 	for _, r := range v.Documents {
+		// The element and the error come from the document.
 		if r.Valid {
-			fmt.Fprintf(&b, "%s: valid %s\n", r.File, r.Element)
+			fmt.Fprintf(&b, "%s: valid %s\n", r.File, format.Display(r.Element))
 		} else {
-			fmt.Fprintf(&b, "%s: INVALID: %s\n", r.File, r.Error)
+			fmt.Fprintf(&b, "%s: INVALID: %s\n", r.File, format.Display(r.Error))
 		}
 	}
 	if v.Invalid > 0 {

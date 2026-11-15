@@ -68,8 +68,10 @@ ieee20305ctl completion powershell | Out-String | Invoke-Expression
 - **Script it**: `--format json` on every command, JSON Lines for streams,
   and [stable exit codes](docs/exitcodes.md).
 - **Interoperable**: CCM_8 for servers that offer nothing else (`--ccm8`),
-  CSIP-AUS site limits and connection points (`--profile csipaus`), verified
-  against the Envoy and GridAPPS-D servers.
+  CSIP-AUS site limits and connection points (`--profile csipaus`). The
+  [guide](docs/guide.md) was recorded against the Envoy and GridAPPS-D
+  servers on 2026-10-22, with ieee20305ctl v0.2.0; see
+  [Interoperability](#interoperability) for what that does and does not cover.
 
 ## Quick start
 
@@ -256,14 +258,23 @@ Details, error codes and the JSON error object: [docs/exitcodes.md](docs/exitcod
 
 ## Interoperability
 
-ieee20305ctl is go-ieee20305, whose client and server are tested on every
-push against [ANU Envoy](https://github.com/bsgip/envoy), the
+ieee20305ctl is go-ieee20305. go-ieee20305 runs its interop suite on its
+pull requests that change code (its PR workflow, as of 2026-11-14): its
+client and server against [ANU Envoy](https://github.com/bsgip/envoy), the
 [GridAPPS-D](https://github.com/GRIDAPPSD/ieee-2030_5-server-go) server and
 client, [py20305](https://github.com/DERSecurity/py20305) and the
 [EPRI client](https://github.com/epri-dev/IEEE-2030.5-Client), through the
 images of [ieee20305-interop](https://github.com/otfabric/ieee20305-interop).
+What that suite covers at each version is in go-ieee20305's
+INTEROPERABILITY.md.
+
 The [guide](docs/guide.md) shows ieee20305ctl itself against the GridAPPS-D
-server (CCM_8, CSIP) and the Envoy server (CSIP-AUS).
+server (CCM_8, CSIP) and the Envoy server (CSIP-AUS). Those sections were
+recorded on 2026-10-22 with ieee20305ctl v0.2.0 (go-ieee20305 v0.5.1)
+against ieee20305-interop v0.2.0, and have not been recorded again since.
+From v0.7.0 on, ieee20305ctl (on go-ieee20305 v0.8.0) refuses a server
+document that breaks the schema, which those recordings predate. No run of
+ieee20305ctl itself against those servers is recorded for a later version.
 
 ## Limitations
 

@@ -8,10 +8,11 @@ import (
 	"text/tabwriter"
 )
 
-// RenderTable renders headers and rows as column-aligned text using tabwriter.
+// RenderTable renders headers and rows as column-aligned text using tabwriter,
+// each cell passed through [Display].
 func RenderTable(m TableMarshaler) (string, error) {
 	headers := m.TableHeaders()
-	rows := m.TableRows()
+	rows := displayRows(m.TableRows())
 	if len(headers) == 0 {
 		return "", fmt.Errorf("table has no headers")
 	}

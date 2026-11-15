@@ -16,6 +16,7 @@ import (
 	ieee20305 "github.com/otfabric/go-ieee20305"
 
 	"github.com/otfabric/ieee20305ctl/internal/errs"
+	"github.com/otfabric/ieee20305ctl/internal/format"
 )
 
 // Request is a request on the control socket: one JSON object per line.
@@ -54,7 +55,9 @@ func (s *Site) ServeControl(ctx context.Context, path string) error {
 		}
 		_ = os.Remove(path)
 	}
-	l, err := net.Listen("unix", path)
+	// Only the owner may connect: the socket is created without group or
+	// other permissions (listenUnix), and then made 0600.
+	l, err := listenUnix(path)
 	if err != nil {
 		return err
 	}
@@ -131,9 +134,11 @@ type Created struct {
 	Href   string `json:"href"`
 }
 
-func (c *Created) MarshalTextOutput() (string, error) { return c.Action + ": " + c.Href, nil }
-func (c *Created) TableHeaders() []string             { return []string{"ACTION", "HREF"} }
-func (c *Created) TableRows() [][]string              { return [][]string{{c.Action, c.Href}} }
+func (c *Created) MarshalTextOutput() (string, error) {
+	return c.Action + ": " + format.Display(c.Href), nil
+}
+func (c *Created) TableHeaders() []string { return []string{"ACTION", "HREF"} }
+func (c *Created) TableRows() [][]string  { return [][]string{{c.Action, c.Href}} }
 
 func (s *Site) do(ctx context.Context, r Request) (any, error) {
 	switch r.Op {

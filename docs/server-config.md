@@ -26,12 +26,18 @@ ieee20305ctl server start --cert server.pem --key server.key --ca ca.pem \
 | `--notify-loopback` | off | Deliver notifications to loopback and link-local URIs, which the server refuses by default |
 | `--advertise` | off | Advertise the server with DNS-SD (`_smartenergy._tcp`) |
 | `--log-requests` | off | A `request` record per request |
+| `--max-connections` | `0` | Most connections open at once, TLS handshakes included; more wait until one closes. 0: no limit |
 | `--duration` | `0` | Stop after this long; 0: until interrupted |
 
 Every flag can come from the environment: `IEEE20305CTL_LISTEN`,
 `IEEE20305CTL_SERVER_CERT`, `IEEE20305CTL_SERVER_KEY`, `IEEE20305CTL_CA`,
 `IEEE20305CTL_SERVER_CONFIG`, `IEEE20305CTL_PROFILE`, `IEEE20305CTL_EDITION`,
 `IEEE20305CTL_CONTROL_SOCKET`, `IEEE20305CTL_FORMAT`.
+
+A connection must send its request headers within 10 s and the whole
+request within 30 s, and take its answer within 30 s; an idle connection is
+closed after 2 minutes, and request headers are limited to 64 KiB (431
+beyond). SECURITY.md lists these and the other limits.
 
 The DeviceCapability is at `/dcap`. The server has the roots `/derp` (DER
 programs), `/rsps` (where devices answer events), `/tp` (tariffs), `/mup`
@@ -124,12 +130,14 @@ by schema name:
 | Kind | Settings | Value |
 |------|----------|-------|
 | On or off | `opModConnect`, `opModEnergize`, `opModGridConnectPermit`, `opModIslandPermit` | `true`, `false` |
-| Percent | `opModMaxLimW`, `opModFixedW`, `opModFixedV`, `opModMaxLimPctWAbsorb`, `opModMaxLimPctVAInject`, `opModMaxLimPctVAAbsorb` | `50`, `12.5`, `-10` |
-| Watts, vars, volts | `opModTargetW`, `opModTargetVar`, `opModTargetV`, `opModMaxLimWInject`, `opModMaxLimWAbsorb`, `opModMaxLimVarInject`, `opModMaxLimVarAbsorb`, `opModFixedVar` | `1500`, `-40000` (the multiplier is chosen) |
+| Percent | `opModMaxLimW`, `opModFixedW`, `opModFixedV`, `opModMaxLimPctWAbsorb`, `opModMaxLimPctVAInject`, `opModMaxLimPctVAAbsorb` | `50`, `12.5`, `-10` (`opModFixedW`): two decimals at most; 0 to 100, and -100 to 100 for `opModFixedW` and `opModFixedV` |
+| Watts, vars, volts | `opModTargetW`, `opModTargetVar`, `opModTargetV`, `opModMaxLimWInject`, `opModMaxLimWAbsorb`, `opModMaxLimVarInject`, `opModMaxLimVarAbsorb` | `1500`, `-40000` (the multiplier is chosen, from -9 to 9: at most 32767 × 10^9) |
+| Hundredths of a percent | `opModFixedVar` (-10000 to 10000), `opModMaxLimPctVarInject`, `opModMaxLimPctVarAbsorb` (0 to 10000) | `2500` (25 %) |
 | CSIP-AUS site limits | `opModExpLimW`, `opModImpLimW`, `opModGenLimW`, `opModLoadLimW`, `opModStorageTargetW` | watts |
 
-`ieee20305ctl server issue-control --help` lists every setting the tool
-knows. Curves (`opModVoltVar`, …) are not set from the seed.
+A value outside these ranges, which IEEE 2030.5 does not allow, is invalid
+input (exit 3). `ieee20305ctl server issue-control --help` lists every
+setting the tool knows. Curves (`opModVoltVar`, …) are not set from the seed.
 
 ### `tariffs`
 
@@ -144,7 +152,9 @@ knows. Curves (`opModVoltVar`, …) are not set from the seed.
 ## The control socket
 
 With `--control-socket PATH` the server listens on a Unix socket (mode
-0600) for the operator commands:
+0600; on Unix systems it is created without group or other permissions) for
+the operator commands. Whoever can connect to it can use every command:
+`--yes` is checked by the operator command, not by the server.
 
 | Command | What it does |
 |---------|--------------|

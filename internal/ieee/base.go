@@ -239,6 +239,25 @@ func settable(t reflect.Type) bool {
 	return value.IsValid() && !href.IsValid() && value.Kind() != reflect.Struct
 }
 
+// The range IEEE 2030.5 gives a PowerOfTenMultiplierType: "any integer
+// between -9 and 9".
+const (
+	minMultiplier = -9
+	maxMultiplier = 9
+	// maxPower is the largest magnitude of a power with a multiplier in
+	// range: 32767 × 10^9.
+	maxPower = 32767e9
+)
+
+// valueRanges are the ranges IEEE 2030.5 gives the values of the controls
+// without a multiplier, by the type of the value: a PerCent is 0 to 10000
+// hundredths of a percent, a SignedPerCent -10000 to 10000. A value outside
+// its range is refused.
+var valueRanges = map[reflect.Type][2]int64{
+	reflect.TypeFor[ieee20305.PerCent]():       {0, 10000},
+	reflect.TypeFor[ieee20305.SignedPerCent](): {-10000, 10000},
+}
+
 func set(f reflect.Value, s string) error {
 	e := reflect.New(f.Type().Elem())
 	if e.Elem().Kind() == reflect.Bool {
@@ -256,11 +275,33 @@ func set(f reflect.Value, s string) error {
 		return fmt.Errorf("%q is not a number", s)
 	}
 	if !mult.IsValid() {
-		if percent(e.Elem().Type()) {
-			x *= 100 // hundredths of a percent
+		if math.IsInf(x, 0) || math.IsNaN(x) {
+			return fmt.Errorf("%q is not a finite number", s)
+		}
+		pct := percent(e.Elem().Type())
+		if pct {
+			// Hundredths of a percent. A percentage with two decimals is
+			// not always exact in binary (0.29 × 100 is 28.999999999999996),
+			// so the product is rounded to the nearest hundredth; what is
+			// further from one than rounding explains is more precision
+			// than the control holds.
+			y := x * 100
+			x = math.Round(y)
+			if math.Abs(y-x) > 1e-6 {
+				return fmt.Errorf("%s has more precision than the control holds", s)
+			}
 		}
 		if x != math.Trunc(x) {
 			return fmt.Errorf("%s has more precision than the control holds", s)
+		}
+		if r, ok := valueRanges[value.Type()]; ok && (x < float64(r[0]) || x > float64(r[1])) {
+			if pct {
+				return fmt.Errorf("%s is out of range: %.2f to %.2f percent", s, float64(r[0])/100, float64(r[1])/100)
+			}
+			return fmt.Errorf("%s is out of range: %d to %d (hundredths of a percent)", s, r[0], r[1])
+		}
+		if x < math.MinInt64 || x >= math.MaxInt64 {
+			return fmt.Errorf("%s is out of range", s)
 		}
 		if err := setInt(value, int64(x)); err != nil {
 			return err
@@ -269,9 +310,10 @@ func set(f reflect.Value, s string) error {
 		return nil
 	}
 	// A power: the smallest multiplier whose value fits. An infinite value
-	// never would (and dividing it never ends).
-	if math.IsInf(x, 0) || math.IsNaN(x) {
-		return fmt.Errorf("%s does not fit a value with a power-of-ten multiplier", s)
+	// never would (and dividing it never ends); a magnitude above maxPower
+	// would need a multiplier above 9.
+	if math.IsInf(x, 0) || math.IsNaN(x) || math.Abs(x) > maxPower {
+		return fmt.Errorf("%s does not fit a value with a power-of-ten multiplier of %d to %d", s, minMultiplier, maxMultiplier)
 	}
 	m := int64(0)
 	for math.Abs(x) > 32767 {
@@ -282,13 +324,15 @@ func set(f reflect.Value, s string) error {
 		x *= 10
 		m--
 	}
-	if x != math.Trunc(x) || math.Abs(x) > 32767 {
-		return fmt.Errorf("%s does not fit a value with a power-of-ten multiplier", s)
+	if x != math.Trunc(x) || math.Abs(x) > 32767 || m < minMultiplier || m > maxMultiplier {
+		return fmt.Errorf("%s does not fit a value with a power-of-ten multiplier of %d to %d", s, minMultiplier, maxMultiplier)
 	}
 	if err := setInt(value, int64(x)); err != nil {
 		return err
 	}
-	mult.SetInt(m)
+	if err := setInt(mult, m); err != nil {
+		return err
+	}
 	f.Set(e)
 	return nil
 }

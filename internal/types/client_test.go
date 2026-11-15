@@ -103,3 +103,47 @@ func TestErrorMessage(t *testing.T) {
 		t.Errorf("%q", got)
 	}
 }
+
+// controlFree reports whether s has no byte below 0x20 but the renderer's
+// own newlines, and no rune of U+007F–U+009F.
+func controlFree(s string) bool {
+	for _, r := range s {
+		if r != '\n' && (r < 0x20 || (r >= 0x7f && r <= 0x9f)) {
+			return false
+		}
+	}
+	return true
+}
+
+// The strings of a server (hrefs, ids, messages that quote them) are shown
+// escaped when they hold control characters: an event stays one line.
+func TestRenderersEscapeControlCharacters(t *testing.T) {
+	const bad = "/derp/1\x1b]0;title\a\r\n12:00:00.000 control_issued\u009b2J"
+	now := time.Date(2026, 11, 15, 12, 0, 0, 0, time.UTC)
+	settings := []ieee.Setting{{Name: "opModVoltVar", Value: bad, Text: bad}}
+	ev := &Event{Time: now, Kind: "log", Href: bad, Resource: bad, Status: bad, MRID: bad, LFDI: bad, Address: bad, Message: bad, Settings: settings}
+	for _, m := range []interface{ MarshalTextOutput() (string, error) }{
+		ev,
+		&Controls{Controls: []Control{{Program: bad, Href: bad, Description: bad, Status: "Active", Settings: settings, ReplyTo: bad, ResponseRequired: bad}}},
+		&Programs{Programs: []Program{{Href: bad, Description: bad, Default: settings}}},
+		&Capability{URL: bad, Links: []Link{{Name: "EndDeviceListLink", Href: bad}}},
+		&Registration{EndDevice: bad, LFDI: "L", SFDI: "S"},
+		&WalkStep{Href: bad, Element: bad},
+		&Posted{Action: "post", Target: bad, Location: bad, Detail: bad},
+		&Written{Action: "put", Hrefs: []string{bad, bad}},
+		&DERs{DERs: []DER{{Href: bad, Resources: []DERResource{{Name: "settings", Href: bad}}}}},
+		&Pricing{Tariffs: []Tariff{{Href: bad, Description: bad, RateComponents: []RateComponent{{Href: bad, Description: bad}}}}},
+		&ConnectionPoint{Href: bad, ID: bad},
+	} {
+		out, err := m.MarshalTextOutput()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !controlFree(out) {
+			t.Errorf("%T: %q", m, out)
+		}
+	}
+	if out, _ := ev.MarshalTextOutput(); strings.Contains(out, "\n") {
+		t.Errorf("an event of two lines: %q", out)
+	}
+}

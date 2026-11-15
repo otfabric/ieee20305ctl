@@ -1,10 +1,14 @@
 # ieee20305ctl guide: common scenarios
 
 Each scenario shows the commands and what they print. The output is real:
-recorded against ieee20305ctl's own server and, where noted, against the
-GridAPPS-D and Envoy servers of
+recorded on 2026-10-22 with ieee20305ctl v0.2.0 (go-ieee20305 v0.5.1),
+against ieee20305ctl's own server and, where noted, against the GridAPPS-D
+and Envoy servers of
 [ieee20305-interop](https://github.com/otfabric/ieee20305-interop) v0.2.0.
-Identifiers, times and ports differ on every run.
+The recordings against GridAPPS-D and Envoy (sections 10 and 11) have not
+been made again with a later version: they predate the schema validation of
+server documents that ieee20305ctl does from v0.7.0 on. Identifiers, times
+and ports differ on every run.
 
 1. [A test PKI](#1-a-test-pki)
 2. [A server for development](#2-a-server-for-development)

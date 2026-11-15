@@ -25,7 +25,7 @@ Moves to go-ieee20305 v0.8.0 (was v0.7.0) and adds one flag to `server start`. E
   - `server start`: `MaxListItems` also caps a device's MirrorUsagePoints, MeterReadings, ReadingSets and FlowReservationResponses, by deleting the oldest; each notification attempt ends after one minute; deleting a subscription stops its pending notifications.
   - `server start` without `--notify-loopback` also refuses notification URIs that are IPv6 forms of refused IPv4 addresses, or hosts-file names of loopback (`ip6-localhost`, `localhost6`, …).
   - `client discover` hears only peers on the local link, and caps cached TTLs at 75 minutes.
-  - `--ccm8`: SHA-1 handshake signatures are neither offered nor accepted.
+  - `--ccm8` still uses go-ieee20305/tlsccm v0.3.0, its latest release: the TLS changes of go-ieee20305 v0.8.0 to that module are not in it yet.
 
 ---
 

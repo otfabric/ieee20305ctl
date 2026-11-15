@@ -4,6 +4,22 @@ Releases are cut with the `Release` workflow (semantic versioning, annotated
 tag, GitHub release with binaries for every platform). The section of the
 version below, up to the `---` that ends it, is the release's notes.
 
+## v0.7.1
+
+**Date:** 2026-11-15
+**Previous release:** v0.7.0
+
+Moves to go-ieee20305/tlsccm v0.4.0 (was v0.3.0), the CCM_8 TLS module of go-ieee20305 v0.8.0. No command, flag or exit code changes.
+
+### Changed
+
+- `--ccm8` (client and `server start`) is built on go-ieee20305/tlsccm v0.4.0 (go-ieee20305 RELEASE.md, v0.8.0):
+  - SHA-1 handshake signatures are neither offered nor accepted, and a TLS 1.2 peer must send `signature_algorithms` (RFC 9155, as in Go 1.25).
+  - The client refuses a server that picks a curve it did not offer.
+  - The CCM length encoding of associated data of 65280 bytes or more follows RFC 3610; a nonce of the wrong length is refused before use.
+
+---
+
 ## v0.7.0
 
 **Date:** 2026-11-15
@@ -25,7 +41,7 @@ Moves to go-ieee20305 v0.8.0 (was v0.7.0) and adds one flag to `server start`. E
   - `server start`: `MaxListItems` also caps a device's MirrorUsagePoints, MeterReadings, ReadingSets and FlowReservationResponses, by deleting the oldest; each notification attempt ends after one minute; deleting a subscription stops its pending notifications.
   - `server start` without `--notify-loopback` also refuses notification URIs that are IPv6 forms of refused IPv4 addresses, or hosts-file names of loopback (`ip6-localhost`, `localhost6`, …).
   - `client discover` hears only peers on the local link, and caps cached TTLs at 75 minutes.
-  - `--ccm8` still uses go-ieee20305/tlsccm v0.3.0, its latest release: the TLS changes of go-ieee20305 v0.8.0 to that module are not in it yet.
+  - `--ccm8` uses go-ieee20305/tlsccm v0.3.0; its v0.4.0 changes arrive in v0.7.1.
 
 ---
 

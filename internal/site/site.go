@@ -34,6 +34,9 @@ type Options struct {
 	Edition ieee20305.Edition
 	// InBand lets unknown devices post their EndDevice.
 	InBand bool
+	// AssignedDevicesOnly lets an aggregator register only the devices
+	// the seed assigns it (managed_by).
+	AssignedDevicesOnly bool
 	// ServerCert and DeviceCAs are the server's certificate, which its
 	// notifier presents too, and the CAs of its devices.
 	ServerCert tls.Certificate
@@ -75,13 +78,14 @@ func New(ctx context.Context, opts Options, seed *Seed) (*Site, error) {
 	}
 	s := &Site{opts: opts, codec: opts.Edition.Codec(), seedPoll: seed.PollRate}
 	cfg := server.Config{
-		DefaultEdition:     opts.Edition,
-		InBandRegistration: opts.InBand,
-		PollRate:           seed.PollRate,
-		OnResponse:         s.onResponse,
-		Metrics:            metrics{s},
-		Logger:             logger{s},
-		NotificationClient: server.NewNotificationClient(opts.ServerCert, opts.DeviceCAs),
+		DefaultEdition:      opts.Edition,
+		InBandRegistration:  opts.InBand,
+		AssignedDevicesOnly: opts.AssignedDevicesOnly,
+		PollRate:            seed.PollRate,
+		OnResponse:          s.onResponse,
+		Metrics:             metrics{s},
+		Logger:              logger{s},
+		NotificationClient:  server.NewNotificationClient(opts.ServerCert, opts.DeviceCAs),
 	}
 	if opts.NotifyLoopback {
 		cfg.NotificationURIAllowed = func(*url.URL) bool { return true }

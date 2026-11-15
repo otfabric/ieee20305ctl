@@ -58,7 +58,7 @@ With `--format text` or `table` it is one line on stderr: `error: <message>`.
 | `transport` | `transport_connect_failed`, `transport_tls_failed`, `listen_failed`, `control_socket_failed` |
 | `timeout` | `request_timeout` (no answer to a request that changes nothing), `outcome_unknown` (no answer to a request that may have changed the server: it was **not** sent again; check before you resend) |
 | `refused` | `not_found` (404), `forbidden` (403), `bad_request` (400), `conflict` (409), `server_error` (5xx), `unavailable` (503, 429), `http_error` (any other status) |
-| `protocol` | `invalid_response`, `pin_mismatch`, `not_registered` |
+| `protocol` | `invalid_response` (a body that does not decode, is too large, or breaks the schema: a document of the server that fails validation is refused, not shown), `pin_mismatch`, `not_registered` |
 | `output` | `json_encode_failed`, `table_render_failed`, `output_write_failed`, `output_file_write_failed` |
 | `internal` | `internal_unexpected` |
 | `interrupted` | `context_canceled` (interrupted before a result) |

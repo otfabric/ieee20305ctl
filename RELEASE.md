@@ -4,6 +4,31 @@ Releases are cut with the `Release` workflow (semantic versioning, annotated
 tag, GitHub release with binaries for every platform). The section of the
 version below, up to the `---` that ends it, is the release's notes.
 
+## v0.7.0
+
+**Date:** 2026-11-15
+**Previous release:** v0.6.0
+
+Moves to go-ieee20305 v0.8.0 (was v0.7.0) and adds one flag to `server start`. Exit codes are unchanged.
+
+### Added
+
+- `server start --assigned-devices-only`: an aggregator registers only the devices of the seed whose `managed_by` is its LFDI. Without the flag it may still register devices the seed does not name, which it then manages (docs/server-config.md).
+
+### Changed
+
+- Built on go-ieee20305 v0.8.0 (go-ieee20305 RELEASE.md, v0.8.0). For the tool this means:
+  - The client commands refuse a document of the server that breaks the schema (an over-length string, a missing or repeated element): exit 6, `invalid_response`, as for a body that does not decode. Servers that sent such documents and worked with v0.6.0 now fail these commands (docs/exitcodes.md).
+  - `client run` and `client subscribe` answer 400 to a notification that breaks the schema, and `client run` ignores notifications of subscriptions that are not its own.
+  - `client run` caps the server's pollRate at 24 hours; `Retry-After` waits are capped at 24 hours, and response headers at 64 KiB.
+  - `server start`: an aggregator no longer registers a device of the seed that is not assigned to it (`managed_by`), with or without the new flag.
+  - `server start`: `MaxListItems` also caps a device's MirrorUsagePoints, MeterReadings, ReadingSets and FlowReservationResponses, by deleting the oldest; each notification attempt ends after one minute; deleting a subscription stops its pending notifications.
+  - `server start` without `--notify-loopback` also refuses notification URIs that are IPv6 forms of refused IPv4 addresses, or hosts-file names of loopback (`ip6-localhost`, `localhost6`, …).
+  - `client discover` hears only peers on the local link, and caps cached TTLs at 75 minutes.
+  - `--ccm8` still uses go-ieee20305/tlsccm v0.3.0, its latest release: the TLS changes of go-ieee20305 v0.8.0 to that module are not in it yet.
+
+---
+
 ## v0.6.0
 
 **Date:** 2026-11-15

@@ -605,6 +605,7 @@ ieee20305ctl server start [flags]
 |------|------|---------|
 | `--advertise` | bool | Advertise the server with DNS-SD (_smartenergy._tcp) on the local network |
 | `--ca` | string | CA certificates of the devices (PEM) [env: IEEE20305CTL_CA] |
+| `--assigned-devices-only` | bool | Let aggregators register only the devices the seed assigns them (managed_by) |
 | `--ccm8` | bool | Serve TLS_ECDHE_ECDSA_WITH_AES_128_CCM_8 first, then AES-128-GCM (for GridAPPS-D and EPRI clients) |
 | `--cert` | string | Server certificate (PEM) [env: IEEE20305CTL_SERVER_CERT] |
 | `--config` | string | Seed file (YAML or JSON): devices, programs, tariffs; see server generate-config [env: IEEE20305CTL_SERVER_CONFIG] |

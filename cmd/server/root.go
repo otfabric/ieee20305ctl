@@ -65,6 +65,7 @@ type startConfig struct {
 	Profile        string        `flag:"profile" env:"IEEE20305CTL_PROFILE" desc:"Profile: ieee20305 or csipaus (CSIP-AUS documents, connection points, IEEE 2030.5-2018)"`
 	Edition        string        `flag:"edition" env:"IEEE20305CTL_EDITION" desc:"Edition of devices the seed does not give one: 2023 or 2018"`
 	InBand         bool          `flag:"in-band" desc:"Let unknown devices post their EndDevice (in-band registration)"`
+	AssignedOnly   bool          `flag:"assigned-devices-only" desc:"Let aggregators register only the devices the seed assigns them (managed_by)"`
 	ControlSocket  string        `flag:"control-socket" env:"IEEE20305CTL_CONTROL_SOCKET" desc:"Unix socket of the operator commands (none when empty)"`
 	Duration       time.Duration `flag:"duration" desc:"Stop after this long (0: until interrupted)"`
 	LogRequests    bool          `flag:"log-requests" desc:"Write a record for every request"`
@@ -152,7 +153,7 @@ func (c *startConfig) run(ctx context.Context, out *format.StreamWriter) (int, e
 	addr := inner.Addr().String()
 	emit(&types.Event{Time: time.Now().UTC(), Kind: "listening", Address: addr,
 		Message: fmt.Sprintf("https://%s/dcap (%s, %s)", addr, c.Profile, edition)})
-	s, err := site.New(ctx, site.Options{Profile: c.Profile, Edition: edition, InBand: c.InBand, ServerCert: cert,
+	s, err := site.New(ctx, site.Options{Profile: c.Profile, Edition: edition, InBand: c.InBand, AssignedDevicesOnly: c.AssignedOnly, ServerCert: cert,
 		DeviceCAs: roots, CCM8: c.CCM8, NotifyLoopback: c.NotifyLoopback, LogRequests: c.LogRequests, Events: emit}, seed)
 	if err != nil {
 		_ = inner.Close()

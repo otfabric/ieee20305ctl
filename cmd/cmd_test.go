@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	ieee20305 "github.com/otfabric/go-ieee20305"
+	"github.com/otfabric/go-ieee20305/security"
 )
 
 func TestOffline(t *testing.T) {
@@ -504,5 +505,33 @@ func TestCCM8(t *testing.T) {
 func TestRequestedFormatStopsAtDashDash(t *testing.T) {
 	if got := requestedFormat([]string{"client", "--", "--format=json"}); got == "json" {
 		t.Errorf("requestedFormat after --: %q", got)
+	}
+}
+
+// An aggregator registers a device the server was not given, unless the
+// server runs with --assigned-devices-only.
+func TestAssignedDevicesOnly(t *testing.T) {
+	const lfdi = "0000000000000000000000000000000000000B01"
+	l, err := security.ParseLFDI(lfdi)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct {
+		flags []string
+		code  int
+	}{{nil, 0}, {[]string{"--assigned-devices-only"}, 6}} {
+		s := startSite(t, `devices:
+  - cert: %PKI%/device-1.pem
+    role: aggregator
+`, c.flags...)
+		s.device(t, "1")
+		doc := filepath.Join(s.dir, "edev.xml")
+		body := `<EndDevice xmlns="urn:ieee:std:2030.5:ns"><lFDI>` + lfdi + `</lFDI><sFDI>` + l.SFDI().String() + `</sFDI></EndDevice>`
+		if err := os.WriteFile(doc, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if r := run(t, "client", "post", "/edev", "--file", doc); r.code != c.code {
+			t.Errorf("%v: post of an EndDevice the server was not given: %+v", c.flags, r)
+		}
 	}
 }

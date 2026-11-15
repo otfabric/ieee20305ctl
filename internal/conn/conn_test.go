@@ -38,6 +38,9 @@ func TestClassify(t *testing.T) {
 		{fmt.Errorf("%w: slow", ieee20305.ErrTimeout), true, errs.KindTimeout, errs.CodeOutcomeUnknown},
 		{fmt.Errorf("%w: down", ieee20305.ErrUnavailable), false, errs.KindTransport, errs.CodeTransportConnectFailed},
 		{fmt.Errorf("%w: junk", ieee20305.ErrProtocol), false, errs.KindProtocol, errs.CodeInvalidResponse},
+		// A server document that fails Validate (go-ieee20305 v0.8.0).
+		{fmt.Errorf("GET /dcap: %w: %w", ieee20305.ErrProtocol, &ieee20305.ValidationError{Field: "DeviceCapability.href"}), false, errs.KindProtocol, errs.CodeInvalidResponse},
+		{fmt.Errorf("GET /dcap: %w: %w", ieee20305.ErrProtocol, &ieee20305.ValidationError{Field: "DeviceCapability.href"}), true, errs.KindProtocol, errs.CodeInvalidResponse},
 		{context.Canceled, false, errs.KindInterrupted, errs.CodeContextCanceled},
 		{&net.OpError{Op: "dial", Err: errors.New("refused")}, false, errs.KindTransport, errs.CodeTransportConnectFailed},
 		{errors.New("other"), false, errs.KindTransport, errs.CodeTransportConnectFailed},
